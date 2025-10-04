@@ -40,6 +40,7 @@ namespace WalkRallyApp.Models
 
 
         // 規約・プライバシー同意のタイムスタンプ（同意時に設定）
+        // ConsentAt は同意チェックに使うタイムスタンプ。参加時に現在時刻を入れます。
         public DateTimeOffset? ConsentAt { get; set; }
     }
 }
