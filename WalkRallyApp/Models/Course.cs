@@ -1,7 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations; //[Required], [Range], [MaxLength] などの属性（アノテーション）を使うための宣言
 namespace WalkRallyApp.Models
+// 1つのコース（スタート/ゴール、時間、名前など）を表すクラス
+
 {
-    // 1つのコース（スタート/ゴール、時間、名前など）を表すクラス
     public class Course
     {
         // 主キー（自動採番）。DBの行を一意に識別します。
