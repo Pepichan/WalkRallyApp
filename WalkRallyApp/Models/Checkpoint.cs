@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using WalkRallyApp.Models;
 namespace WalkRallyApp.Models
 // コース内の各チェックポイント（緯度経度・到達半径・配点・種別・QRトークン）を表すクラス
 
