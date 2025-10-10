@@ -24,3 +24,10 @@ public enum SubmissionType
     QuizAnswer = 0,
     PhotoUpload = 1
 }
+
+// 提出の種類（Submission.cs で使用）
+public enum SubmissionKind
+{
+    Quiz = 0,
+    Photo = 1
+}
