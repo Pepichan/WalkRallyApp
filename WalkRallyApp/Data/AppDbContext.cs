@@ -4,7 +4,7 @@ using WalkRallyApp.Models;
 namespace WalkRallyApp.Data
 {
     // DBの入口（EF Coreがテーブルを管理するためのクラス）
-    public class AppDbContext (DbContextOptions<AppDbContext> options) : DbContext(options)
+    public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
     {
         // ここに「テーブル一覧」を登録する
         public DbSet<Course> Courses => Set<Course>();
@@ -39,9 +39,23 @@ namespace WalkRallyApp.Data
 
             // RunとTeamStatusの1:1リレーション設定
             b.Entity<Run>()
-                .HasOne(r => r.Status)  // Run 1件につき TeamStatus 1件（最新位置のみ）を保証
+                .HasOne(r => r.Status)  // Run 1件につき TeamStatus 1件（最新位置のみ）
                 .WithOne(s => s.Run)
                 .HasForeignKey<TeamStatus>(s => s.RunId);
+
+            // Submissions -> Run は Cascade（Run削除で提出も消す）
+            b.Entity<Submission>()
+                .HasOne(s => s.Run)
+                .WithMany(r => r.Submissions)
+                .HasForeignKey(s => s.RunId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Submissions -> Checkpoint は NoAction（連鎖削除しない）
+            b.Entity<Submission>()
+                .HasOne(s => s.Checkpoint)
+                .WithMany()
+                .HasForeignKey(s => s.CheckpointId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             // 既定値（DB側での初期値）
             b.Entity<Checkpoint>().Property(x => x.RadiusMeters).HasDefaultValue(30);
