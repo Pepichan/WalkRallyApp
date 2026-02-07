@@ -14,14 +14,18 @@ namespace WalkRallyApp.Models
         public int CourseId { get; set; }
         public Course Course { get; set; } = default!;
 
+        // コース内の並び順（１，２，３・・・）
+        [Range(1, 1000)]
+        public int Order { get; set; }
+
 
         // 種別：クイズ／写真／情報（Enum は Models/Enum.cs で定義済みの想定）
         public CheckpointType Type { get; set; } = CheckpointType.Info;
 
 
         // 位置（緯度・経度）
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
+        public double Lat { get; set; }
+        public double Lng { get; set; }
 
 
         // 到達判定の半径（メートル）。要件は30m
@@ -36,6 +40,6 @@ namespace WalkRallyApp.Models
 
         // GPSが使えない場所のフォールバック用（QRコードの埋め込み用トークン）
         [MaxLength(64)]
-        public string? QRToken { get; set; }
+        public string? QrToken { get; set; }
     }
 }

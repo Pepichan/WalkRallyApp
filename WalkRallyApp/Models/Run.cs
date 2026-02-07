@@ -30,7 +30,7 @@ namespace WalkRallyApp.Models
 
 
         // 合計スコア（提出や正解に応じて加点）
-        public int TotalScore { get; set; } // 順位計算に使用
+        public int Score { get; set; } // 順位計算に使用
 
 
         // この走行での提出（回答や写真）一覧（1:N）
