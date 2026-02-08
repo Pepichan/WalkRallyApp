@@ -1,0 +1,22 @@
+﻿@page
+@model WalkRallyApp.Pages.StartModel
+@{
+    ViewData["Title"] = "スタート";
+}
+
+<div class="container">
+    <h1 class="mb-3">スタート画面</h1>
+
+    <div class="mb-3">
+        <strong>ルール</strong>
+        <ul>
+            <li>制限時間は60分</li>
+            <li>道路横断時は注意</li>
+            <li>ゴールはタウンホール前広場</li>
+        </ul>
+    </div>
+
+    <form method="post">
+        <button class="btn btn-success" type="submit">スタート</button>
+    </form>
+</div>
