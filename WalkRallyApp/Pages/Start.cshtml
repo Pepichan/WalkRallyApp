@@ -8,6 +8,11 @@
     <h1 class="mb-3">スタート画面</h1>
 
     <div class="mb-3">
+        <div>班名：@Model.TeamName</div>
+        <div>制限時間：@Model.TimeLimitMinutes 分</div>
+    </div>
+
+    <div class="mb-3">
         <strong>ルール</strong>
         <ul>
             <li>制限時間は60分</li>
@@ -17,6 +22,7 @@
     </div>
 
     <form method="post">
+        <input type="hidden" name="teamId" value="@Model.TeamId" />
         <button class="btn btn-success" type="submit">スタート</button>
     </form>
 </div>

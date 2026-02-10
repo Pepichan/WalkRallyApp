@@ -31,7 +31,7 @@ namespace WalkRallyApp.Models
 
         // 制限時間（分）。1分〜24時間（1440分）の範囲で制限。
         [Range(1, 24 * 60)]
-        public int TimeLimiMinutes { get; set; }
+        public int TimeLimitMinutes { get; set; }
 
 
         // 公開中フラグ（無効にして将来非表示などに使えます）
