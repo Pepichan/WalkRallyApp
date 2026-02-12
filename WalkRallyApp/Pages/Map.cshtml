@@ -32,4 +32,16 @@
         <button class="btn btn-secondary" type="button">写真を撮影する</button>
     </div>
 
+    <div>
+        <strong>チェックポイント一覧</strong>
+        <ul>
+            @foreach (var cp in Model.Checkpoints)
+            {
+                <li>
+                    #@cp.Order - @cp.Type (配点： @cp.Points)
+                </li>
+            }
+        </ul>
+    </div>
+
 </div>

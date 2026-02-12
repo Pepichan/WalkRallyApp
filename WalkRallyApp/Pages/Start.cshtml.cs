@@ -80,6 +80,21 @@ namespace WalkRallyApp.Pages
             _db.Courses.Add(course); //新規コースを追加
             await _db.SaveChangesAsync();
 
+            // ? デフォルトのチェックポイントを追加（MVP用の仮データ）
+            _db.Checkpoints.AddRange(
+                new Checkpoint
+                {
+                  CourseId = course.Id,
+                  Order = 1,
+                  Type = CheckpointType.Quiz,
+                  Lat = 0,
+                  Lng = 0,
+                  Points = 10,
+                  QrToken = "CP002"
+                });
+
+            await _db.SaveChangesAsync();
+
             return course; //新規作成したコースを返す
         }
     }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using WalkRallyApp.Data;
+using WalkRallyApp.Models;
 
 namespace WalkRallyApp.Pages
 {
@@ -16,6 +17,7 @@ namespace WalkRallyApp.Pages
 
         public string TeamName { get; set; } = string.Empty; // 画面に渡すチーム名
         public string RemainingTimeText { get; set; } = "00:00"; // 画面に渡す残り時間テキスト（初期値は00:00）
+        public List<Checkpoint> Checkpoints { get; set; } = new(); // 画面に渡すチェックポイントのリスト
 
         public async Task<IActionResult> OnGetAsync(int runId)
         {
@@ -41,6 +43,12 @@ namespace WalkRallyApp.Pages
             }
             
             RemainingTimeText = remaining .ToString(@"mm\:ss"); // 残り時間を「分:秒」形式のテキストに変換
+
+            // ? チェックポイント一覧を取得
+            Checkpoints = await _db.Checkpoints
+                .Where(c => c.CourseId == run.CourseId) // ランのコースIDに紐づくチェックポイントを取得
+                .OrderBy(c => c.Order) // チェックポイントの順番でソート
+                .ToListAsync();
 
             return Page(); // マップ画面を表示
         }
