@@ -41,19 +41,19 @@ namespace WalkRallyApp.Pages
             // 今は表示だけ（後でDB保存処理を追加）
         }
 
-        public async Task<IActionResult> OnPostAsync() 
+        public async Task<IActionResult> OnPostAsync()  //送信ボタン押下時に呼ばれる
         {
             if (!Consent)
             {
-                ModelState.AddModelError(string.Empty, "同意が必要です。");
+                ModelState.AddModelError(string.Empty, "同意が必要です。"); // 同意がない場合のエラーメッセージ
             }
 
             if (!ModelState.IsValid)
             {
-                return Page();
+                return Page(); // 入力エラーがある場合は再度ページを表示してエラーメッセージを見せる
             }
 
-            var code = await GenerateUniqueCodeAsync();
+            var code = await GenerateUniqueCodeAsync(); // チームコード生成（重複しないようにDBをチェック）
 
             var team = new Team
             {
@@ -66,30 +66,31 @@ namespace WalkRallyApp.Pages
                 ConsentAt = DateTimeOffset.UtcNow
             };
 
-            _db.Teams.Add(team);
-            await _db.SaveChangesAsync();
+            _db.Teams.Add(team); // DBにチーム情報を保存
+            await _db.SaveChangesAsync(); // 変更を保持
 
-            return RedirectToPage("Start", new { teamId = team.Id });
+            return RedirectToPage("Start", new { teamId = team.Id }); // 登録後、スタートページにリダイレクト（チームIDを渡す）
         }
 
         private async Task<string> GenerateUniqueCodeAsync()
         {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; // コードに使う文字（大文字と数字）
             var random = new Random();
 
             for (var i = 0; i < 5; i++)
             {
+                // 6文字のランダムコードを生成
                 var code = new string(Enumerable.Range(0, 6)
                     .Select(_ => chars[random.Next(chars.Length)]).ToArray());
 
-                var exists = await _db.Teams.AnyAsync(t => t.Code == code);
+                var exists = await _db.Teams.AnyAsync(t => t.Code == code); // DBに同じコードが存在するかチェック
                 if (!exists)
                 {
-                    return code;
+                    return code; // 重複がなければこのコードを返す
                 }
             }
 
-            return Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+            return Guid.NewGuid().ToString("N")[..6].ToUpperInvariant(); // 万が一重複が続いた場合はGUIDからコードを生成（ほぼ重複しない）
         }
     }
 }

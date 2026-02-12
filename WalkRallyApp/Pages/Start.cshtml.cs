@@ -15,56 +15,56 @@ namespace WalkRallyApp.Pages
             _db = db;
         }
 
-        public int TeamId { get; set; }
-        public string TeamName { get; set; } = string.Empty;
-        public int TimeLimitMinutes { get; set; }
+        public int TeamId { get; set; } //画面に渡すチームID
+        public string TeamName { get; set; } = string.Empty; //画面に渡すチーム名
+        public int TimeLimitMinutes { get; set; } //画面に渡す制限時間（分）
 
         public async Task<IActionResult> OnGetAsync(int teamId)
         {
-            var team = await _db.Teams.FindAsync(teamId);
+            var team = await _db.Teams.FindAsync(teamId); //チームIDからチーム情報を取得
             if (team == null)
             {
-                return RedirectToPage("Join");
+                return RedirectToPage("Join"); //未登録なら受付へリダイレクト
             }
 
             var course = await EnsureDefaultCourseAsync();
 
-            TeamId = team.Id;
+            TeamId = team.Id; //画面に渡すチームIDをセット
             TeamName = team.Name;
             TimeLimitMinutes = course.TimeLimitMinutes;
 
-            return Page();
+            return Page(); //スタート画面を表示
         }
 
         public async Task<IActionResult> OnPostAsync(int teamId)
         {
-            var team = await _db.Teams.FindAsync(teamId);
+            var team = await _db.Teams.FindAsync(teamId); //チームIDからチーム情報を取得
             if (team == null)
             {
-                return RedirectToPage("Join");
+                return RedirectToPage("Join"); //未登録なら受付へリダイレクト
             }
-            var course = await EnsureDefaultCourseAsync();
+            var course = await EnsureDefaultCourseAsync(); //コース情報を取得（なければデフォルトコースを作成）
 
             var run = new Run
             {
-                TeamId = team.Id,
-                CourseId = course.Id,
-                StartedAt = DateTimeOffset.UtcNow,
-                IsFinished = false
+                TeamId = team.Id, //参加チーム
+                CourseId = course.Id, //参加コース
+                StartedAt = DateTimeOffset.UtcNow, //開始日時
+                IsFinished = false //未完了
             };
 
-            _db.Runs.Add(run);
+            _db.Runs.Add(run); //ラン情報を保存
             await _db.SaveChangesAsync();
 
-            return RedirectToPage("Map", new { runId = run.Id });
+            return RedirectToPage("Map", new { runId = run.Id }); //マップ画面へリダイレクト（ランIDを渡す）
         }
 
         private async Task<Course> EnsureDefaultCourseAsync()
         {
-            var course = await _db.Courses.FirstOrDefaultAsync();
+            var course = await _db.Courses.FirstOrDefaultAsync(); //コースが存在するか確認
             if (course != null)
             {
-                return course;
+                return course; //既にコースが存在する場合はそれを返す
             }
             
             course = new Course
@@ -77,10 +77,10 @@ namespace WalkRallyApp.Pages
                TimeLimitMinutes = 60
             };
 
-            _db.Courses.Add(course);
+            _db.Courses.Add(course); //新規コースを追加
             await _db.SaveChangesAsync();
 
-            return course;
+            return course; //新規作成したコースを返す
         }
     }
 }
