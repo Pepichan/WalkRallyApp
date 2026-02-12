@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using WalkRallyApp.Data;
@@ -15,87 +15,117 @@ namespace WalkRallyApp.Pages
             _db = db;
         }
 
-        public int TeamId { get; set; } //‰æ–Ê‚É“n‚·ƒ`[ƒ€ID
-        public string TeamName { get; set; } = string.Empty; //‰æ–Ê‚É“n‚·ƒ`[ƒ€–¼
-        public int TimeLimitMinutes { get; set; } //‰æ–Ê‚É“n‚·§ŒÀŠÔi•ªj
+        public int TeamId { get; set; } //ç”»é¢ã«æ¸¡ã™ãƒãƒ¼ãƒ ID
+        public string TeamName { get; set; } = string.Empty; //ç”»é¢ã«æ¸¡ã™ãƒãƒ¼ãƒ å
+        public int TimeLimitMinutes { get; set; } //ç”»é¢ã«æ¸¡ã™åˆ¶é™æ™‚é–“ï¼ˆåˆ†ï¼‰
 
         public async Task<IActionResult> OnGetAsync(int teamId)
         {
-            var team = await _db.Teams.FindAsync(teamId); //ƒ`[ƒ€ID‚©‚çƒ`[ƒ€î•ñ‚ğæ“¾
+            var team = await _db.Teams.FindAsync(teamId); //ãƒãƒ¼ãƒ IDã‹ã‚‰ãƒãƒ¼ãƒ æƒ…å ±ã‚’å–å¾—
             if (team == null)
             {
-                return RedirectToPage("Join"); //–¢“o˜^‚È‚çó•t‚ÖƒŠƒ_ƒCƒŒƒNƒg
+                return RedirectToPage("Join"); //æœªç™»éŒ²ãªã‚‰å—ä»˜ã¸ãƒªãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆ
             }
 
             var course = await EnsureDefaultCourseAsync();
 
-            TeamId = team.Id; //‰æ–Ê‚É“n‚·ƒ`[ƒ€ID‚ğƒZƒbƒg
+            TeamId = team.Id; //ç”»é¢ã«æ¸¡ã™ãƒãƒ¼ãƒ IDã‚’ã‚»ãƒƒãƒˆ
             TeamName = team.Name;
             TimeLimitMinutes = course.TimeLimitMinutes;
 
-            return Page(); //ƒXƒ^[ƒg‰æ–Ê‚ğ•\¦
+            return Page(); //ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã‚’è¡¨ç¤º
         }
 
         public async Task<IActionResult> OnPostAsync(int teamId)
         {
-            var team = await _db.Teams.FindAsync(teamId); //ƒ`[ƒ€ID‚©‚çƒ`[ƒ€î•ñ‚ğæ“¾
+            var team = await _db.Teams.FindAsync(teamId); //ãƒãƒ¼ãƒ IDã‹ã‚‰ãƒãƒ¼ãƒ æƒ…å ±ã‚’å–å¾—
             if (team == null)
             {
-                return RedirectToPage("Join"); //–¢“o˜^‚È‚çó•t‚ÖƒŠƒ_ƒCƒŒƒNƒg
+                return RedirectToPage("Join"); //æœªç™»éŒ²ãªã‚‰å—ä»˜ã¸ãƒªãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆ
             }
-            var course = await EnsureDefaultCourseAsync(); //ƒR[ƒXî•ñ‚ğæ“¾i‚È‚¯‚ê‚ÎƒfƒtƒHƒ‹ƒgƒR[ƒX‚ğì¬j
+            var course = await EnsureDefaultCourseAsync(); //ã‚³ãƒ¼ã‚¹æƒ…å ±ã‚’å–å¾—ï¼ˆãªã‘ã‚Œã°ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã‚³ãƒ¼ã‚¹ã‚’ä½œæˆï¼‰
 
             var run = new Run
             {
-                TeamId = team.Id, //Q‰Áƒ`[ƒ€
-                CourseId = course.Id, //Q‰ÁƒR[ƒX
-                StartedAt = DateTimeOffset.UtcNow, //ŠJn“ú
-                IsFinished = false //–¢Š®—¹
+                TeamId = team.Id, //å‚åŠ ãƒãƒ¼ãƒ 
+                CourseId = course.Id, //å‚åŠ ã‚³ãƒ¼ã‚¹
+                StartedAt = DateTimeOffset.UtcNow, //é–‹å§‹æ—¥æ™‚
+                IsFinished = false //æœªå®Œäº†
             };
 
-            _db.Runs.Add(run); //ƒ‰ƒ“î•ñ‚ğ•Û‘¶
+            _db.Runs.Add(run); //ãƒ©ãƒ³æƒ…å ±ã‚’ä¿å­˜
             await _db.SaveChangesAsync();
 
-            return RedirectToPage("Map", new { runId = run.Id }); //ƒ}ƒbƒv‰æ–Ê‚ÖƒŠƒ_ƒCƒŒƒNƒgiƒ‰ƒ“ID‚ğ“n‚·j
+            return RedirectToPage("Map", new { runId = run.Id }); //ãƒãƒƒãƒ—ç”»é¢ã¸ãƒªãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆï¼ˆãƒ©ãƒ³IDã‚’æ¸¡ã™ï¼‰
         }
 
         private async Task<Course> EnsureDefaultCourseAsync()
         {
-            var course = await _db.Courses.FirstOrDefaultAsync(); //ƒR[ƒX‚ª‘¶İ‚·‚é‚©Šm”F
-            if (course != null)
+            var course = await _db.Courses.FirstOrDefaultAsync(); //ã‚³ãƒ¼ã‚¹ãŒå­˜åœ¨ã™ã‚‹ã‹ç¢ºèª
+            if (course == null)
             {
-                return course; //Šù‚ÉƒR[ƒX‚ª‘¶İ‚·‚éê‡‚Í‚»‚ê‚ğ•Ô‚·
-            }
-            
-            course = new Course
-            {
-               NameJa = "ƒfƒtƒHƒ‹ƒgƒR[ƒX",
-               StartLatitude = 0,
-               StartLongitude = 0,
-               GoalLatitude = 0,
-               GoalLongitude = 0,
-               TimeLimitMinutes = 60
-            };
-
-            _db.Courses.Add(course); //V‹KƒR[ƒX‚ğ’Ç‰Á
-            await _db.SaveChangesAsync();
-
-            // ? ƒfƒtƒHƒ‹ƒg‚Ìƒ`ƒFƒbƒNƒ|ƒCƒ“ƒg‚ğ’Ç‰ÁiMVP—p‚Ì‰¼ƒf[ƒ^j
-            _db.Checkpoints.AddRange(
-                new Checkpoint
+                course = new Course
                 {
-                  CourseId = course.Id,
-                  Order = 1,
-                  Type = CheckpointType.Quiz,
-                  Lat = 0,
-                  Lng = 0,
-                  Points = 10,
-                  QrToken = "CP002"
+                    NameJa = "ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã‚³ãƒ¼ã‚¹",
+                    StartLatitude = 0,
+                    StartLongitude = 0,
+                    GoalLatitude = 0,
+                    GoalLongitude = 0,
+                    TimeLimitMinutes = 60
+                };
+
+                _db.Courses.Add(course); //æ–°è¦ã‚³ãƒ¼ã‚¹ã‚’è¿½åŠ 
+                await _db.SaveChangesAsync();
+            }
+
+            // âœ… ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®ãƒã‚§ãƒƒã‚¯ãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆMVPç”¨ã®ä»®ãƒ‡ãƒ¼ã‚¿ï¼‰
+            var hasCheckpoint = await _db.Checkpoints.AnyAsync(c => c.CourseId == course.Id);
+            if (!hasCheckpoint)
+            {
+                _db.Checkpoints.AddRange( new Checkpoint
+                {
+                        CourseId = course.Id,
+                        Order = 1,
+                        Type = CheckpointType.Quiz,
+                        Lat = 0,
+                        Lng = 0,
+                        Points = 10,
+                        QrToken = "CP001"
                 });
 
-            await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync();
+            }
 
-            return course; //V‹Kì¬‚µ‚½ƒR[ƒX‚ğ•Ô‚·
+            // âœ… CP#1 ã«ã‚¯ã‚¤ã‚ºã‚’è¿½åŠ 
+            var quizCheckpoint = await _db.Checkpoints
+                .FirstAsync(c => c.CourseId == course.Id && c.Order == 1);
+
+            var hasQuestion = await _db.Questions.AnyAsync(q => q.CheckpointId == quizCheckpoint.Id);
+
+            if (!hasQuestion)
+            {
+                var question = new Question
+                {
+                    CheckpointId = quizCheckpoint.Id,
+                    Type = QuestionType.Choice,
+                    TextJa = "ã‚·ãƒ‰ãƒ‹ãƒ¼ãŒã‚ã‚‹å·ã¯ï¼Ÿ"
+
+                };
+
+                _db.Questions.Add(question);
+                await _db.SaveChangesAsync();
+
+                _db.ChoiceOptions.AddRange(
+                    new ChoiceOption { QuestionId = question.Id, TextJa = "ãƒ‹ãƒ¥ãƒ¼ã‚µã‚¦ã‚¹ã‚¦ã‚§ãƒ¼ãƒ«ã‚ºå·", IsCorrect = true },
+                    new ChoiceOption { QuestionId = question.Id, TextJa = "ãƒ“ã‚¯ãƒˆãƒªã‚¢å·", IsCorrect = false },
+                    new ChoiceOption { QuestionId = question.Id, TextJa = "ã‚¯ã‚¤ãƒ¼ãƒ³ã‚ºãƒ©ãƒ³ãƒ‰å·", IsCorrect = false },
+                    new ChoiceOption { QuestionId = question.Id, TextJa = "è¥¿ã‚ªãƒ¼ã‚¹ãƒˆãƒ©ãƒªã‚¢å·", IsCorrect = false }
+                );
+
+                await _db.SaveChangesAsync();
+            }
+
+            return course; //æ–°è¦ä½œæˆã—ãŸã‚³ãƒ¼ã‚¹ã‚’è¿”ã™
         }
     }
 }

@@ -10,28 +10,11 @@
         <div>班：@Model.TeamName</div>
     </div>
 
-    <h2 class="mb-3">チェックポイント #1</h2>
-
-    <div class="mb-3">
-        <strong>到達判定</strong> GPS判定中... or [QR読み取り]
-    </div>
-
-    <div class="mb-3">
-        <strong>クイズ</strong>
-        <p>「シドニーがある州は？」</p>
-        <div>
-            <input type="radio" name="q1" /> ニューサウスウェールズ州
-            <input type="radio" name="q1" /> ビクトリア州
-            <input type="radio" name="q1" /> クイーンズランド州
-        </div>
-        <button class="btn btn-primary mt-2" type="button">回答送信</button>
-    </div>
-
-    <div class="mb-3">
-        <strong>写真ミッション</strong>
-        <button class="btn btn-secondary" type="button">写真を撮影する</button>
-    </div>
-
+    @if (!string.IsNullOrEmpty(Model.AnswerResult))
+    {
+        <div class="alert alert-info">@Model.AnswerResult</div>
+    }
+    
     <div>
         <strong>チェックポイント一覧</strong>
         <ul>
@@ -43,5 +26,31 @@
             }
         </ul>
     </div>
+
+    @if (Model.CurrentQuestion != null)
+    {
+      <h2 class="mb-3">チェックポイント #@Model.CurrentCheckPoint?.Order</h2>
+      
+      <form method="post" asp-page-handler="Answer">
+          <input type="hidden" name="runId" value="@Request.Query["runId"]" />
+          <div class="mb-3">
+              <strong>クイズ</strong>
+              <p>@Model.CurrentQuestion.TextJa</p>
+
+              @foreach (var choice in Model.CurrentChoices)
+                {
+                    <div>
+                        <input type="radio" name="SelectedChoiceId" value="@choice.Id" /> 
+                        @choice.TextJa
+                    </div>
+                }
+              <button class="btn btn-primary mt-2" type="submit">回答送信</button>
+          </div>
+        </form>
+    }
+    else
+    {
+        <p>クイズがありません。</p>
+    }
 
 </div>
