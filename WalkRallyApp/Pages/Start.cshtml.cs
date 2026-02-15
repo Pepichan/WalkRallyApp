@@ -125,7 +125,27 @@ namespace WalkRallyApp.Pages
                 await _db.SaveChangesAsync();
             }
 
-            return course; //新規作成したコースを返す
+            // ✅ 写真チェックポイントが無ければ作成
+            var hasPhotoCheckpoint = await _db.Checkpoints
+                .AnyAsync(c => c.CourseId == course.Id && c.Type == CheckpointType.Photo);
+
+            if (!hasPhotoCheckpoint)
+            {
+                _db.Checkpoints.Add(new Checkpoint
+                {
+                    CourseId = course.Id,
+                    Order = 2,
+                    Type = CheckpointType.Photo,
+                    Lat = 0,
+                    Lng = 0,
+                    Points = 20,
+                    QrToken = "CP002"
+                });
+                await _db.SaveChangesAsync();
+            }
+
+
+                return course; //新規作成したコースを返す
         }
     }
 }

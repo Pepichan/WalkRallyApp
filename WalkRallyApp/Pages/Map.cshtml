@@ -53,4 +53,19 @@
         <p>クイズがありません。</p>
     }
 
+    @if (!string.IsNullOrEmpty(Model.PhotoResult))
+    {
+        <div class="alert alert-success">@Model.PhotoResult</div>
+    }
+
+    @if (Model.PhotoCheckpoint != null)
+    {
+        <h3>写真ミッション</h3>
+        <form method="post" asp-page-handler="Photo" enctype="multipart/form-data">
+            <input type="hidden" name="runId" value="@Request.Query["runId"]" />
+            <input type="file" name="PhotoFile" accept="image/*" class="form-control mb-2" />
+            <button class="btn btn-secondary" type="submit">写真を送信</button>
+        </form>
+    }
+
 </div>

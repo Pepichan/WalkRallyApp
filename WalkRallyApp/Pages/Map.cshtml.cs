@@ -9,10 +9,12 @@ namespace WalkRallyApp.Pages
     public class MapModel : PageModel
     {
         private readonly AppDbContext _db;
+        private readonly IWebHostEnvironment _env;
 
-        public MapModel(AppDbContext db)
+        public MapModel(AppDbContext db, IWebHostEnvironment env)
         {
             _db = db;
+            _env = env;
         }
 
         public string TeamName { get; set; } = string.Empty; // 画面に渡すチーム名
@@ -23,13 +25,24 @@ namespace WalkRallyApp.Pages
         public Checkpoint? CurrentCheckPoint { get; set; } // 画面に渡す現在のチェックポイント（初期値はnull）
         public Question? CurrentQuestion { get; set; } // 画面に渡す現在の問題（初期値はnull）
         public List<ChoiceOption> CurrentChoices { get; set; } = new(); // 画面に渡す現在の選択肢のリスト（初期値は空リスト）
+        public Checkpoint? PhotoCheckpoint { get; set; } // 画面に渡す写真用チェックポイント（初期値はnull）
 
 
+        // 画面から送信される選択された選択肢ID
         [BindProperty]
-        public int SelectedChoiceId { get; set; } // 画面から送信される選択された選択肢ID
+        public int SelectedChoiceId { get; set; }
+
+        // ? 写真ファイルを受け取るためのプロパティ
+        [BindProperty]
+        public IFormFile? PhotoFile { get; set; }
+
+        // 結果表示用の一時データ（正解/不正解メッセージなど）
+        [TempData]
+        public string? AnswerResult { get; set; }
 
         [TempData]
-        public string? AnswerResult { get; set; } // 結果表示用の一時データ（正解/不正解メッセージなど）
+        public string? PhotoResult { get; set; }
+
 
         public async Task<IActionResult> OnGetAsync(int runId)
         {
@@ -75,6 +88,9 @@ namespace WalkRallyApp.Pages
                 }
             }
 
+            // ? 写真用のCP（最初のPhoto）
+            PhotoCheckpoint = Checkpoints.FirstOrDefault(c => c.Type == CheckpointType.Photo);
+
             return Page(); // マップ画面を表示
         }
 
@@ -110,7 +126,7 @@ namespace WalkRallyApp.Pages
                 CheckpointId = checkpoint.Id,
                 Kind = SubmissionKind.Quiz,
                 IsCorrect = isCorrect,
-                Points = points                
+                Points = points
             };
 
             _db.Submissions.Add(submission); // 提出情報をデータベースに追加
@@ -119,6 +135,72 @@ namespace WalkRallyApp.Pages
             await _db.SaveChangesAsync();
 
             AnswerResult = isCorrect ? "正解！＋１０点" : "不正解！（加点なし）"; // 結果表示用のメッセージをセット
+            return RedirectToPage("Map", new { runId }); // マップにリダイレクトして結果を表示
+        }
+
+        public async Task<IActionResult> OnPostPhotoAsync(int runId)
+        {
+            var run = await _db.Runs
+                .Include(r => r.Course)
+                .FirstOrDefaultAsync(r => r.Id == runId);
+
+            if (run == null || PhotoFile == null)
+            {
+                return RedirectToPage("Join");
+            }
+
+            // ? 写真用チェックポイント取得
+            var photoCheckpoint = await _db.Checkpoints
+                .Where(c => c.CourseId == run.CourseId && c.Type == CheckpointType.Photo) // ランのコースIDに紐づく写真用チェックポイントを取得
+                .OrderBy(c => c.Order) // チェックポイントの順番でソート
+                .FirstOrDefaultAsync(); // とりあえず最初の写真用チェックポイントを取得
+
+            if (photoCheckpoint == null)
+            {
+                PhotoResult = "写真用のチェックポイントが見つかりませんでした。"; // 結果表示用のメッセージをセット
+                return RedirectToPage("Map", new { runId }); // 写真用チェックポイントが見つからない場合はマップにリダイレクト
+            }
+
+            // ? 拡張子チェック（jpg/pngのみ許可）
+            var extension = Path.GetExtension(PhotoFile.FileName).ToLowerInvariant();
+            var allowed = new[] { ".jpg", ".jpeg", ".png" };
+            if (!allowed.Contains(extension))
+            {
+                PhotoResult = "無効なファイル形式です。jpgまたはpngをアップロードしてください。"; // 結果表示用のメッセージをセット
+                return RedirectToPage("Map", new { runId }); // 無効なファイル形式の場合はマップにリダイレクト
+            }
+
+            // ? 保存先（wwwroot/uploads）
+            var uploads = Path.Combine(_env.WebRootPath, "uploads");
+            Directory.CreateDirectory(uploads); // ディレクトリが存在しない場合は作成
+
+            // ? ファイル名をユニークに
+            var fileName = $"{Guid.NewGuid():N}{extension}";
+            var filePath = Path.Combine(uploads, fileName);
+
+            // ? ファイル保存
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await PhotoFile.CopyToAsync(stream);
+            }
+
+            // ? Submission 保存
+            var submission = new Submission
+            {
+                RunId = run.Id,
+                CheckpointId = photoCheckpoint.Id,
+                Kind = SubmissionKind.Photo,
+                IsCorrect = true, // 写真提出はとりあえず常に正解扱い（後で審査機能を追加する場合は変更）
+                Points = photoCheckpoint.Points, // チェックポイントの点数を加算
+                PhotoPath = $"/uploads/{fileName}" // 保存したファイルのパスを保存
+            };
+
+            _db.Submissions.Add(submission); // 提出情報をデータベースに追加
+            run.Score += photoCheckpoint.Points; // ランのスコアに加算
+
+            await _db.SaveChangesAsync();
+
+            PhotoResult = "写真を提出しました！＋１０点"; // 結果表示用のメッセージをセット
             return RedirectToPage("Map", new { runId }); // マップにリダイレクトして結果を表示
         }
     }
