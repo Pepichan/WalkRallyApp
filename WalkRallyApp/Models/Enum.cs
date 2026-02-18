@@ -29,5 +29,6 @@ public enum SubmissionType
 public enum SubmissionKind
 {
     Quiz = 0,
-    Photo = 1
+    Photo = 1,
+    Reach = 2
 }

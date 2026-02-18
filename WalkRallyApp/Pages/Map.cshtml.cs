@@ -115,46 +115,68 @@ namespace WalkRallyApp.Pages
         // GPS到達判定
         public async Task<IActionResult> OnPostReachGpsAsync(int runId, int checkpointId)
         {
+            var run = await _db.Runs.FirstOrDefaultAsync(r => r.Id == runId);
+            if (run == null)
+            {
+                return RedirectToPage("Join");
+            }
+
             var checkpoint = await _db.Checkpoints.FindAsync(checkpointId);
             if (checkpoint == null || Lat == null || Lng == null)
             {
                 ReachResult = "位置情報が取得できませんでした。";
-                return RedirectToPage("Map", new { runId }); // 位置情報が取得できない場合はマップにリダイレクト
+                return RedirectToPage("Map", new { runId });
             }
 
             var distance = CalculateDistanceMeters(Lat.Value, Lng.Value, checkpoint.Lat, checkpoint.Lng);
 
             if (distance <= checkpoint.RadiusMeters)
             {
-                ReachResult = $"チェックポイントに到達！距離: {Math.Round(distance)}m";
+                // ? 到達保存＆スコア加算
+                var added = await SaveReachAsync(run, checkpoint);
+                ReachResult = added
+                    ? $"到達しました！（+{checkpoint.Points}点）距離: {Math.Round(distance)}m"
+                    : "すでに到達済みです。";
             }
             else
             {
-                ReachResult = $"まだチェックポイントから遠いです。距離: {Math.Round(distance)}m";
+                ReachResult = $"未到達です（距離 {Math.Round(distance)}m）";
             }
-            
-            return RedirectToPage("Map", new { runId }); // 結果を表示するためにマップにリダイレクト)
+
+            return RedirectToPage("Map", new { runId });
         }
 
 
         // QR到達判定
         public async Task<IActionResult> OnPostReachQrAsync(int runId, int checkpointId)
         {
+            var run = await _db.Runs.FirstOrDefaultAsync(r => r.Id == runId);
+            if (run == null)
+            {
+                return RedirectToPage("Join");
+            }
+
             var checkpoint = await _db.Checkpoints.FindAsync(checkpointId);
             if (checkpoint == null || string.IsNullOrWhiteSpace(QrInput))
             {
                 ReachResult = "QRコードが読み取れませんでした。";
-                return RedirectToPage("Map", new { runId }); // QRコードの入力がない場合はマップにリダイレクト
+                return RedirectToPage("Map", new { runId });
             }
+
             if (checkpoint.QrToken == QrInput)
             {
-                ReachResult = "QRコードに到達！";
+                // ? 到達保存＆スコア加算
+                var added = await SaveReachAsync(run, checkpoint);
+                ReachResult = added
+                    ? $"QR到達判定OK！(+{checkpoint.Points}点)"
+                    : "すでに到達済みです。";
             }
             else
             {
-                ReachResult = "QRコードが違います。";
+                ReachResult = "QRコードが一致しません。";
             }
-            return RedirectToPage("Map", new { runId }); // 結果を表示するためにマップにリダイレクト
+
+            return RedirectToPage("Map", new { runId });
         }
 
 
@@ -293,5 +315,35 @@ namespace WalkRallyApp.Pages
         }
 
         private static double ToRad(double deg) => deg * (Math.PI / 180); // 度をラジアンに変換
+
+        // ? 到達保存の共通処理
+        private async Task<bool> SaveReachAsync(Run run, Checkpoint checkpoint)
+        {
+            // 既に到達済みか確認（2重加算防止）
+            var exists = await _db.Submissions.AnyAsync(s =>
+                s.RunId == run.Id &&
+                s.CheckpointId == checkpoint.Id &&
+                s.Kind == SubmissionKind.Reach);
+
+            if (exists)
+            {
+                return false;
+            }
+
+            var submission = new Submission
+            {
+                RunId = run.Id,
+                CheckpointId = checkpoint.Id,
+                Kind = SubmissionKind.Reach,
+                Points = checkpoint.Points,
+                IsCorrect = null // 到達なので正誤は不要
+            };
+
+            _db.Submissions.Add(submission);
+            run.Score += checkpoint.Points; // ? スコア加算
+
+            await _db.SaveChangesAsync();
+            return true;
+        }
     }
 }
