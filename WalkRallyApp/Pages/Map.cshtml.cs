@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client;
 using WalkRallyApp.Data;
 using WalkRallyApp.Models;
 
@@ -25,14 +26,25 @@ namespace WalkRallyApp.Pages
         public Checkpoint? CurrentCheckPoint { get; set; } // 画面に渡す現在のチェックポイント（初期値はnull）
         public Question? CurrentQuestion { get; set; } // 画面に渡す現在の問題（初期値はnull）
         public List<ChoiceOption> CurrentChoices { get; set; } = new(); // 画面に渡す現在の選択肢のリスト（初期値は空リスト）
-        public Checkpoint? PhotoCheckpoint { get; set; } // 画面に渡す写真用チェックポイント（初期値はnull）
+        public Checkpoint? PhotoCheckpoint { get; set; } // 画面に渡す写真CP
 
 
         // 画面から送信される選択された選択肢ID
         [BindProperty]
         public int SelectedChoiceId { get; set; }
 
-        // ? 写真ファイルを受け取るためのプロパティ
+        // GPS送信用
+        [BindProperty]
+        public double? Lat { get; set; }
+
+        [BindProperty]
+        public double? Lng { get; set; }
+
+        // QR入力
+        [BindProperty]
+        public string? QrInput { get; set; }
+
+        // 写真ファイルを受け取るためのプロパティ
         [BindProperty]
         public IFormFile? PhotoFile { get; set; }
 
@@ -40,6 +52,11 @@ namespace WalkRallyApp.Pages
         [TempData]
         public string? AnswerResult { get; set; }
 
+        // GPS/QR/写真の到達判定の結果を表示するための一時データ
+        [TempData]
+        public string? ReachResult { get; set; }
+
+        // 写真提出の結果を表示するための一時データ
         [TempData]
         public string? PhotoResult { get; set; }
 
@@ -94,6 +111,53 @@ namespace WalkRallyApp.Pages
             return Page(); // マップ画面を表示
         }
 
+
+        // GPS到達判定
+        public async Task<IActionResult> OnPostReachGpsAsync(int runId, int checkpointId)
+        {
+            var checkpoint = await _db.Checkpoints.FindAsync(checkpointId);
+            if (checkpoint == null || Lat == null || Lng == null)
+            {
+                ReachResult = "位置情報が取得できませんでした。";
+                return RedirectToPage("Map", new { runId }); // 位置情報が取得できない場合はマップにリダイレクト
+            }
+
+            var distance = CalculateDistanceMeters(Lat.Value, Lng.Value, checkpoint.Lat, checkpoint.Lng);
+
+            if (distance <= checkpoint.RadiusMeters)
+            {
+                ReachResult = $"チェックポイントに到達！距離: {Math.Round(distance)}m";
+            }
+            else
+            {
+                ReachResult = $"まだチェックポイントから遠いです。距離: {Math.Round(distance)}m";
+            }
+            
+            return RedirectToPage("Map", new { runId }); // 結果を表示するためにマップにリダイレクト)
+        }
+
+
+        // QR到達判定
+        public async Task<IActionResult> OnPostReachQrAsync(int runId, int checkpointId)
+        {
+            var checkpoint = await _db.Checkpoints.FindAsync(checkpointId);
+            if (checkpoint == null || string.IsNullOrWhiteSpace(QrInput))
+            {
+                ReachResult = "QRコードが読み取れませんでした。";
+                return RedirectToPage("Map", new { runId }); // QRコードの入力がない場合はマップにリダイレクト
+            }
+            if (checkpoint.QrToken == QrInput)
+            {
+                ReachResult = "QRコードに到達！";
+            }
+            else
+            {
+                ReachResult = "QRコードが違います。";
+            }
+            return RedirectToPage("Map", new { runId }); // 結果を表示するためにマップにリダイレクト
+        }
+
+
         public async Task<IActionResult> OnPostAnswerAsync(int runId)
         {
             var run = await _db.Runs
@@ -144,21 +208,29 @@ namespace WalkRallyApp.Pages
                 .Include(r => r.Course)
                 .FirstOrDefaultAsync(r => r.Id == runId);
 
-            if (run == null || PhotoFile == null)
+            // ? run が無ければ Join に戻す（正しい挙動）
+            if (run == null)
             {
                 return RedirectToPage("Join");
             }
 
+            // ? ファイル未選択なら Map に戻す（Join に飛ばさない）
+            if (PhotoFile == null || PhotoFile.Length == 0)
+            {
+                PhotoResult = "ファイルが選択されていません。";
+                return RedirectToPage("Map", new { runId });
+            }
+
             // ? 写真用チェックポイント取得
             var photoCheckpoint = await _db.Checkpoints
-                .Where(c => c.CourseId == run.CourseId && c.Type == CheckpointType.Photo) // ランのコースIDに紐づく写真用チェックポイントを取得
-                .OrderBy(c => c.Order) // チェックポイントの順番でソート
-                .FirstOrDefaultAsync(); // とりあえず最初の写真用チェックポイントを取得
+                .Where(c => c.CourseId == run.CourseId && c.Type == CheckpointType.Photo)
+                .OrderBy(c => c.Order)
+                .FirstOrDefaultAsync();
 
             if (photoCheckpoint == null)
             {
-                PhotoResult = "写真用のチェックポイントが見つかりませんでした。"; // 結果表示用のメッセージをセット
-                return RedirectToPage("Map", new { runId }); // 写真用チェックポイントが見つからない場合はマップにリダイレクト
+                PhotoResult = "写真用のチェックポイントが見つかりませんでした。";
+                return RedirectToPage("Map", new { runId });
             }
 
             // ? 拡張子チェック（jpg/pngのみ許可）
@@ -166,13 +238,13 @@ namespace WalkRallyApp.Pages
             var allowed = new[] { ".jpg", ".jpeg", ".png" };
             if (!allowed.Contains(extension))
             {
-                PhotoResult = "無効なファイル形式です。jpgまたはpngをアップロードしてください。"; // 結果表示用のメッセージをセット
-                return RedirectToPage("Map", new { runId }); // 無効なファイル形式の場合はマップにリダイレクト
+                PhotoResult = "無効なファイル形式です。jpgまたはpngをアップロードしてください。";
+                return RedirectToPage("Map", new { runId });
             }
 
             // ? 保存先（wwwroot/uploads）
             var uploads = Path.Combine(_env.WebRootPath, "uploads");
-            Directory.CreateDirectory(uploads); // ディレクトリが存在しない場合は作成
+            Directory.CreateDirectory(uploads);
 
             // ? ファイル名をユニークに
             var fileName = $"{Guid.NewGuid():N}{extension}";
@@ -190,18 +262,36 @@ namespace WalkRallyApp.Pages
                 RunId = run.Id,
                 CheckpointId = photoCheckpoint.Id,
                 Kind = SubmissionKind.Photo,
-                IsCorrect = true, // 写真提出はとりあえず常に正解扱い（後で審査機能を追加する場合は変更）
-                Points = photoCheckpoint.Points, // チェックポイントの点数を加算
-                PhotoPath = $"/uploads/{fileName}" // 保存したファイルのパスを保存
+                IsCorrect = true,
+                Points = photoCheckpoint.Points,
+                PhotoPath = $"/uploads/{fileName}"
             };
 
-            _db.Submissions.Add(submission); // 提出情報をデータベースに追加
-            run.Score += photoCheckpoint.Points; // ランのスコアに加算
+            _db.Submissions.Add(submission);
+            run.Score += photoCheckpoint.Points;
 
             await _db.SaveChangesAsync();
 
-            PhotoResult = "写真を提出しました！＋１０点"; // 結果表示用のメッセージをセット
-            return RedirectToPage("Map", new { runId }); // マップにリダイレクトして結果を表示
+            PhotoResult = "写真を提出しました！＋１０点";
+            return RedirectToPage("Map", new { runId });
         }
+
+
+        // 距離計算（ハバースイン）
+        private static double CalculateDistanceMeters(double lat1, double lng1, double lat2, double lng2)
+        {
+            const double R = 6371000; // 地球の半径（メートル）
+            var dLat = ToRad(lat2 - lat1);
+            var dLng = ToRad(lng2 - lng1);
+
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2)) *
+                    Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c; // 距離をメートルで返す
+        }
+
+        private static double ToRad(double deg) => deg * (Math.PI / 180); // 度をラジアンに変換
     }
 }
