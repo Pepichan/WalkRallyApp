@@ -2,123 +2,138 @@
 @model WalkRallyApp.Pages.MapModel
 @{
     ViewData["Title"] = "チェックポイント";
+    var runId = Request.Query["runId"];
 }
 
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>残り時間：@Model.RemainingTimeText</div>
-        <div>班：@Model.TeamName</div>
-    </div>
+<div class="app-page">
+    <div class="app-card">
+        <div class="app-info-bar">
+            <div>
+                <div class="app-label">残り時間</div>
+                <div class="app-value">@Model.RemainingTimeText</div>
+            </div>
+            <div class="text-end">
+                <div class="app-label">班</div>
+                <div class="app-value">@Model.TeamName</div>
+            </div>
+        </div>
 
-    
-    @if (!string.IsNullOrEmpty(Model.AnswerResult))
-    {
-        <div class="alert alert-info">@Model.AnswerResult</div>
-    }
-    
-    <div>
-        <strong>チェックポイント一覧</strong>
-        <ul>
-            @foreach (var cp in Model.Checkpoints)
-            {
-                <li>
-                    #@cp.Order - @cp.Type (配点： @cp.Points)
-                </li>
-            }
-        </ul>
-    </div>
+        @if (!string.IsNullOrEmpty(Model.AnswerResult))
+        {
+            <div class="alert alert-info">@Model.AnswerResult</div>
+        }
 
+        @if (!string.IsNullOrEmpty(Model.ReachResult))
+        {
+            <div class="alert alert-warning">@Model.ReachResult</div>
+        }
 
-    @if (Model.CurrentQuestion != null)
-    {
-      <h2 class="mb-3">チェックポイント #@Model.CurrentCheckPoint?.Order</h2>
-      
-      <form method="post" asp-page-handler="Answer">
-          <input type="hidden" name="runId" value="@Request.Query["runId"]" />
-          <div class="mb-3">
-              <strong>クイズ</strong>
-              <p>@Model.CurrentQuestion.TextJa</p>
+        @if (!string.IsNullOrEmpty(Model.PhotoResult))
+        {
+            <div class="alert alert-success">@Model.PhotoResult</div>
+        }
 
-              @foreach (var choice in Model.CurrentChoices)
+        <div class="app-section">
+            <div class="app-section-title">チェックポイント一覧</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var cp in Model.Checkpoints)
                 {
-                    <div>
-                        <input type="radio" name="SelectedChoiceId" value="@choice.Id" /> 
-                        @choice.TextJa
-                    </div>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>#@cp.Order - @cp.Type</span>
+                        <span class="badge bg-secondary">@cp.Points 点</span>
+                    </li>
                 }
-              <button class="btn btn-primary mt-2" type="submit">回答送信</button>
-          </div>
-        </form>
-    }
-    else
-    {
-        <p>クイズがありません。</p>
-    }
+            </ul>
+        </div>
 
+        <div class="app-section">
+            <div class="app-section-title">現在のチェックポイント</div>
+            <div class="text-muted">
+                #@Model.CurrentCheckPoint?.Order
+            </div>
+        </div>
 
-    @if (!string.IsNullOrEmpty(Model.PhotoResult))
-    {
-        <div class="alert alert-success">@Model.PhotoResult</div>
-    }
+        <div class="app-section">
+            <div class="app-section-title">クイズ</div>
+            @if (Model.CurrentQuestion != null)
+            {
+                <form method="post" asp-page-handler="Answer">
+                    <input type="hidden" name="runId" value="@runId" />
+                    <p class="mb-3">@Model.CurrentQuestion.TextJa</p>
 
+                    @foreach (var choice in Model.CurrentChoices)
+                    {
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="SelectedChoiceId" value="@choice.Id" id="choice_@choice.Id" />
+                            <label class="form-check-label" for="choice_@choice.Id">@choice.TextJa</label>
+                        </div>
+                    }
 
-    @if (Model.PhotoCheckpoint != null)
-    {
-        <h3>写真ミッション</h3>
-        <form method="post" asp-page-handler="Photo" enctype="multipart/form-data">
-            <input type="hidden" name="runId" value="@Request.Query["runId"]" />
-            <input type="file" name="PhotoFile" accept="image/*" class="form-control mb-2" />
-            <button class="btn btn-secondary" type="submit">写真を送信</button>
-        </form>
-    }
+                    <button class="btn btn-primary mt-3 w-100" type="submit">回答送信</button>
+                </form>
+            }
+            else
+            {
+                <div class="text-muted">クイズがありません。</div>
+            }
+        </div>
 
-    @if (!string.IsNullOrEmpty(Model.ReachResult))
-    {
-        <div class="alert alert-warning">@Model.ReachResult</div>
-    }
+        @if (Model.PhotoCheckpoint != null)
+        {
+            <div class="app-section">
+                <div class="app-section-title">写真ミッション</div>
+                <form method="post" asp-page-handler="Photo" enctype="multipart/form-data">
+                    <input type="hidden" name="runId" value="@runId" />
+                    <input type="file" name="PhotoFile" accept="image/*" class="form-control mb-2" />
+                    <button class="btn btn-outline-secondary w-100" type="submit">写真を送信</button>
+                </form>
+            </div>
+        }
 
+        @if (Model.CurrentCheckPoint != null)
+        {
+            <div class="app-section">
+                <div class="app-section-title">到達判定</div>
 
-    @if (Model.CurrentCheckPoint != null)
-    {
-        <h3>到達判定</h3>
-        <form method="post" asp-page-handler="ReachGps">
-            <input type="hidden" name="runId" value="@Request.Query["runId"]" />
-            <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint.Id" />
-            <input type="hidden" id="lat" name="Lat" />
-            <input type="hidden" id="lng" name="Lng" />
-            <button class="btn btn-outline-primary" type="button" id="gpsBtn">GPSで判定</button>
-        </form>
+                <form method="post" asp-page-handler="ReachGps" class="mb-2">
+                    <input type="hidden" name="runId" value="@runId" />
+                    <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint.Id" />
+                    <input type="hidden" id="lat" name="Lat" />
+                    <input type="hidden" id="lng" name="Lng" />
+                    <button class="btn btn-outline-primary w-100" type="button" id="gpsBtn">GPSで判定</button>
+                </form>
 
-        <form method="post" asp-page-handler="ReachQr" class="mt-2">
-            <input type="hidden" name="runId" value="@Request.Query["runId"]" />
-            <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint.Id" />
-            <input class="form-control mb-2" name="QrInput" placeholder="QRコードの文字列を入力" />
-            <button class="btn btn-outline-secondary" type="submit">QRで判定</button>
-        </form>
-    }
+                <form method="post" asp-page-handler="ReachQr">
+                    <input type="hidden" name="runId" value="@runId" />
+                    <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint.Id" />
+                    <input class="form-control mb-2" name="QrInput" placeholder="QRコードの文字列を入力" />
+                    <button class="btn btn-outline-secondary w-100" type="submit">QRで判定</button>
+                </form>
+            </div>
+        }
+    </div>
 
     @section Scripts
     {
         <script>
             document.getElementById("gpsBtn")?.addEventListener("click", () =>
             {
-                if (!navigator.geolocation) 
+                if (!navigator.geolocation)
                 {
-                   alert("このブラウザでは位置情報が使えません。")
-                   return;
+                    alert("このブラウザでは位置情報が使えません。");
+                    return;
                 }
-                navigator.geolocation.getCurrentPosition((pos) => 
+
+                navigator.geolocation.getCurrentPosition((pos) =>
                 {
                     document.getElementById("lat").value = pos.coords.latitude;
                     document.getElementById("lng").value = pos.coords.longitude;
                     document.getElementById("gpsBtn").closest("form").submit();
-                }, () => 
+                }, () =>
                 {
                     alert("位置情報の取得に失敗しました。");
                 });
             });
         </script>
     }
-    
-
 </div>

@@ -19,4 +19,60 @@ html {
 
 body {
   margin-bottom: 60px;
+  background-color: #f7f8fa;
+  color: #1f2937;
+}
+
+.app-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 12px 80px;
+}
+
+.app-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.app-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.app-section {
+  margin-top: 20px;
+}
+
+.app-section-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.app-info-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.app-label {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.app-value {
+  font-weight: 600;
+}
+
+.app-list {
+  margin: 0;
+  padding-left: 18px;
 }
