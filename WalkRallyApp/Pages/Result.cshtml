@@ -1,0 +1,25 @@
+﻿@page
+@model WalkRallyApp.Pages.ResultModel
+@{
+    ViewData["Title"] = "結果発表";
+}
+
+<div class="app-page">
+    <div class="app-card">
+        <div class="app-title">結果発表</div>
+
+    <div class="app-section">
+        <div class="app-section-title">あなたの班</div>
+        <div class="app-value">@Model.TeamName</div>
+    </div>
+
+    <div class="app-section">
+        <div class="app-section-title">順位</div>
+        <div class="app-value">@Model.Rank 位 / @Model.TotalTeams 班</div>
+    </div>
+
+    <div class="mt-4">
+        <a class="btn btn-outline-secondary w-100" asp-asp-page="Join">戻る</a>
+    </div>
+    </div>
+</div>
