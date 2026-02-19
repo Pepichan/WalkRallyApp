@@ -1,0 +1,51 @@
+﻿@page
+@model WalkRallyApp.Pages.Admin.DashboardModel
+@{
+    ViewData["Title"] = "運営ダッシュボード";
+}
+
+<div class="app-page">
+    <div class="app-card">
+        <div class="app-title">運営ダッシュボード</div>
+        <p class="text-muted">班の進捗・順位・得点を確認できます。</p>
+
+        <div class="app-section">
+            <div class="app-section-title">班一覧</div>
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>順位</th>
+                            <th>班</th>
+                            <th>進捗</th>
+                            <th>得点</th>
+                            <th>最終更新</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr>
+                                <td>@row.Rank 位</td>
+                                <td>@row.TeamName</td>
+                                <td>@row.ReachedCount / @row.TotalCheckpoints CP</td>
+                                <td>@row.Score 点</td>
+                                <td>@(row.LastUpdatedAt?.ToString("HH:mm") ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="app-section">
+            <div class="app-section-title">運営操作</div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-outline-secondary" disabled>アナウンス送信（準備中）</button>
+                <button class="btn btn-outline-secondary" disabled>CSV出力（準備中）</button>
+            </div>
+        </div>
+    </div>
+</div>
+
