@@ -29,6 +29,11 @@ namespace WalkRallyApp.Models
         public double GoalLongitude { get; set; }
 
 
+        // ゴール用QRトークン（任意）
+        [MaxLength(64)]
+        public string? GoalQrToken { get; set; }
+
+
         // 制限時間（分）。1分〜24時間（1440分）の範囲で制限。
         [Range(1, 24 * 60)]
         public int TimeLimitMinutes { get; set; }

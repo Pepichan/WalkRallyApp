@@ -43,6 +43,10 @@ namespace WalkRallyApp.Pages
         [BindProperty]
         public string? QrInput { get; set; }
 
+        // ゴールQR入力
+        [BindProperty]
+        public string? GoalQrInput { get; set; }
+
         // 写真ファイルを受け取るためのプロパティ
         [BindProperty]
         public IFormFile? PhotoFile { get; set; }
@@ -363,6 +367,47 @@ namespace WalkRallyApp.Pages
             return true;
         }
 
+
+        // ゴール到達判定（QR）
+        public async Task<IActionResult> OnPostReachGoalQrAsync(int runId)
+        {
+            var run = await _db.Runs
+                .Include(r => r.Course)
+                .FirstOrDefaultAsync(r => r.Id == runId);
+
+            if (run == null)
+            {
+                return RedirectToPage("Join");
+            }
+
+            if (run.Course == null || string.IsNullOrWhiteSpace(run.Course.GoalQrToken))
+            {
+                GoalResult = "ゴールQRが設定されていません。";
+                return RedirectToPage("Map", new { runId });
+            }
+
+            if (string.IsNullOrWhiteSpace(GoalQrInput))
+            {
+                GoalResult = "QRコードが読み取れませんでした。";
+                return RedirectToPage("Map", new { runId });
+            }
+
+            if (run.Course.GoalQrToken != GoalQrInput)
+            {
+                GoalResult = "QRコードが一致しません。";
+                return RedirectToPage("Map", new { runId });
+            }
+
+            if (!run.IsFinished) // ゴール到達で終了
+            {
+                run.IsFinished = true;
+                run.FinishedAt = DateTimeOffset.UtcNow;
+                run.ElapsedSeconds = (int)Math.Max(0, (run.FinishedAt.Value - run.StartedAt).TotalSeconds);
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToPage("Result", new { runId });
+        }
 
 
         // ゴール到達判定（GPS）

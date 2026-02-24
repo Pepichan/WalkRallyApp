@@ -32,7 +32,7 @@ namespace WalkRallyApp.Pages
             TeamId = team.Id; //画面に渡すチームIDをセット
             TeamName = team.Name;
             TimeLimitMinutes = course.TimeLimitMinutes;
-
+            
             return Page(); //スタート画面を表示
         }
 
@@ -71,10 +71,17 @@ namespace WalkRallyApp.Pages
                     StartLongitude = 0,
                     GoalLatitude = 0,
                     GoalLongitude = 0,
-                    TimeLimitMinutes = 60
+                    TimeLimitMinutes = 60,
+                    GoalQrToken = "GOAL001"
                 };
 
                 _db.Courses.Add(course); //新規コースを追加
+                await _db.SaveChangesAsync();
+            }
+
+            if (string.IsNullOrWhiteSpace(course.GoalQrToken))
+            {
+                course.GoalQrToken = "GOAL001"; // ゴールQRの既定値
                 await _db.SaveChangesAsync();
             }
 

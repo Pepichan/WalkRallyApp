@@ -141,6 +141,15 @@
                         <button class="btn btn-outline-success w-100" type="button" data-gps-submit="true">ゴール判定（GPS）</button>
                     </form>
                 </div>
+
+                <div class="app-section">
+                    <div class="app-section-title">ゴール判定（QR）</div>
+                    <form method="post" asp-page-handler="ReachGoalQr">
+                        <input type="hidden" name="runId" value="@runId" />
+                        <input class="form-control mb-2" name="GoalQrInput" placeholder="ゴールQRの文字列を入力" />
+                        <button class="btn btn-outline-success w-100" type="submit">ゴール判定（QR）</button>
+                    </form>
+                </div>
             </div>
         }
     </div>
