@@ -1,0 +1,33 @@
+﻿@page
+@model WalkRallyApp.Pages.Admin.AnnouncementModel
+@{
+    ViewData["Title"] = "アナウンス送信";
+}
+
+<div class="app-page">
+    <div class="app-card">
+        <div class="app-title">アナウンス送信</div>
+
+        <form method="post" class="mb-4">
+            <div class="mb-3">
+                <label class="form-label">メッセージ</label>
+                <textarea class="form-control" asp-for="Message" rows="3"></textarea>
+                <span class="text-danger" asp-validation-for="Message"></span>
+            </div>
+            <button class="btn btn-primary w-100" type="submit">送信</button>
+        </form>
+
+        <div class="app-section">
+            <div class="app-section-title">送信履歴</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var item in Model.Latest)
+                {
+                    <li class="list-group-item">
+                        <div class="fw-semibold">@item.Message</div>
+                        <div class="small text-muted">@item.CreatedAt.ToLocalTime():HH:mm</div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

@@ -21,12 +21,11 @@ namespace WalkRallyApp.Pages
         public string TeamName { get; set; } = string.Empty; // 画面に渡すチーム名
         public string RemainingTimeText { get; set; } = "00:00"; // 画面に渡す残り時間テキスト（初期値は00:00）
         public List<Checkpoint> Checkpoints { get; set; } = new(); // 画面に渡すチェックポイントのリスト
-
-
         public Checkpoint? CurrentCheckPoint { get; set; } // 画面に渡す現在のチェックポイント（初期値はnull）
         public Question? CurrentQuestion { get; set; } // 画面に渡す現在の問題（初期値はnull）
         public List<ChoiceOption> CurrentChoices { get; set; } = new(); // 画面に渡す現在の選択肢のリスト（初期値は空リスト）
         public Checkpoint? PhotoCheckpoint { get; set; } // 画面に渡す写真CP
+        public List<Announcement> Announcements { get; set; } = new(); // 直近アナウンス
 
 
         // 画面から送信される選択された選択肢ID
@@ -107,6 +106,12 @@ namespace WalkRallyApp.Pages
 
             // ? 写真用のCP（最初のPhoto）
             PhotoCheckpoint = Checkpoints.FirstOrDefault(c => c.Type == CheckpointType.Photo);
+
+            // 直近5件のアナウンスを取得
+            Announcements = await _db.Announcements
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(5)
+                .ToListAsync();
 
             return Page(); // マップ画面を表示
         }

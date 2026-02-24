@@ -15,6 +15,8 @@ namespace WalkRallyApp.Data
         public DbSet<Run> Runs => Set<Run>();
         public DbSet<Submission> Submissions => Set<Submission>();
         public DbSet<TeamStatus> TeamStatuses => Set<TeamStatus>();
+        public DbSet<Announcement> Announcements => Set<Announcement>();
+
 
         // DBの細かいルール（制約やリレーション）をここで指定
         protected override void OnModelCreating(ModelBuilder b)

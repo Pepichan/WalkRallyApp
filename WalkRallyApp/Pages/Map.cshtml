@@ -18,6 +18,22 @@
             </div>
         </div>
 
+        @if (Model.Announcements.Any())
+        {
+            <div class="app-section">
+                <div class="app-section-title">お知らせ</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var a in Model.Announcements)
+                    {
+                        <li class="list-group-item">
+                            <div>@a.Message</div>
+                            <div class="small text-muted">@a.CreatedAt.ToLocalTime():HH:mm</div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
         @if (!string.IsNullOrEmpty(Model.AnswerResult))
         {
             <div class="alert alert-info">@Model.AnswerResult</div>
