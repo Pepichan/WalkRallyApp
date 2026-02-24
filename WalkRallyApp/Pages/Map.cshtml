@@ -49,6 +49,12 @@
             <div class="alert alert-success">@Model.PhotoResult</div>
         }
 
+        @if (!string.IsNullOrEmpty(Model.GoalResult))
+        {
+            <div class="alert alert-warning">@Model.GoalResult</div>
+        }
+
+
         <div class="app-section">
             <div class="app-section-title">チェックポイント一覧</div>
             <ul class="list-group list-group-flush">
@@ -114,9 +120,9 @@
                 <form method="post" asp-page-handler="ReachGps" class="mb-2">
                     <input type="hidden" name="runId" value="@runId" />
                     <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint.Id" />
-                    <input type="hidden" id="lat" name="Lat" />
-                    <input type="hidden" id="lng" name="Lng" />
-                    <button class="btn btn-outline-primary w-100" type="button" id="gpsBtn">GPSで判定</button>
+                    <input type="hidden" class="gps-lat" name="Lat" />
+                    <input type="hidden" class="gps-lng" name="Lng" />
+                    <button class="btn btn-outline-primary w-100" type="button" data-gps-submit="true">GPSで判定</button>
                 </form>
 
                 <form method="post" asp-page-handler="ReachQr">
@@ -125,6 +131,16 @@
                     <input class="form-control mb-2" name="QrInput" placeholder="QRコードの文字列を入力" />
                     <button class="btn btn-outline-secondary w-100" type="submit">QRで判定</button>
                 </form>
+
+                <div class="app-section">
+                    <div class="app-section-title">ゴール判定</div>
+                    <form method="post" asp-page-handler="ReachGoalGps">
+                        <input type="hidden" name="runId" value="@runId" />
+                        <input type="hidden" class="gps-lat" name="Lat" />
+                        <input type="hidden" class="gps-lng" name="Lng" />
+                        <button class="btn btn-outline-success w-100" type="button" data-gps-submit="true">ゴール判定（GPS）</button>
+                    </form>
+                </div>
             </div>
         }
     </div>
@@ -132,22 +148,31 @@
     @section Scripts
     {
         <script>
-            document.getElementById("gpsBtn")?.addEventListener("click", () =>
+            document.querySelectorAll("[data-gps-submit]").forEach((btn) =>
             {
-                if (!navigator.geolocation)
+                btn.addEventListener("click", () =>
                 {
-                    alert("このブラウザでは位置情報が使えません。");
-                    return;
-                }
+                    if (!navigator.geolocation)
+                    {
+                        alert("このブラウザでは位置情報が使えません。");
+                        return;
+                    }
 
-                navigator.geolocation.getCurrentPosition((pos) =>
-                {
-                    document.getElementById("lat").value = pos.coords.latitude;
-                    document.getElementById("lng").value = pos.coords.longitude;
-                    document.getElementById("gpsBtn").closest("form").submit();
-                }, () =>
-                {
-                    alert("位置情報の取得に失敗しました。");
+                    const form = btn.closest("form");
+                    if (!form)
+                    {
+                        return;
+                    }
+
+                    navigator.geolocation.getCurrentPosition((pos) =>
+                    {
+                        form.querySelector(".gps-lat").value = pos.coords.latitude;
+                        form.querySelector(".gps-lng").value = pos.coords.longitude;
+                        form.submit();
+                    }, () =>
+                    {
+                        alert("位置情報の取得に失敗しました。");
+                    });
                 });
             });
         </script>

@@ -59,6 +59,10 @@ namespace WalkRallyApp.Pages
         [TempData]
         public string? PhotoResult { get; set; }
 
+        // ゴール判定の結果を表示するための一時データ
+        [TempData]
+        public string? GoalResult { get; set; }
+
 
         public async Task<IActionResult> OnGetAsync(int runId)
         {
@@ -358,5 +362,54 @@ namespace WalkRallyApp.Pages
             await _db.SaveChangesAsync();
             return true;
         }
+
+
+
+        // ゴール到達判定（GPS）
+        public async Task<IActionResult> OnPostReachGoalGpsAsync(int runId)
+        {
+            var run = await _db.Runs
+                .Include(r => r.Course)
+                .FirstOrDefaultAsync(r => r.Id == runId);
+
+            if (run == null)
+            {
+                return RedirectToPage("Join");
+            }
+
+            if (run.Course == null)
+            {
+                GoalResult = "コース情報が取得できませんでした。";
+                return RedirectToPage("Map", new { runId });
+            }
+
+            if (Lat == null || Lng == null)
+            {
+                GoalResult = "位置情報が取得できませんでした。";
+                return RedirectToPage("Map", new { runId });
+            }
+
+            // ゴール半径（要件に合わせて30m）
+            const int goalRadiusMeters = 30;
+            var distance = CalculateDistanceMeters(Lat.Value, Lng.Value, run.Course.GoalLatitude, run.Course.GoalLongitude);
+
+            if (distance <= goalRadiusMeters)
+            {
+                // ゴール到達で終了
+                if (!run.IsFinished)
+                {
+                    run.IsFinished = true;
+                    run.FinishedAt = DateTimeOffset.UtcNow;
+                    run.ElapsedSeconds = (int)Math.Max(0, (run.FinishedAt.Value - run.StartedAt).TotalSeconds);
+                    await _db.SaveChangesAsync();
+                }
+
+                return RedirectToPage("Result", new { runId });
+            }
+
+            GoalResult = $"ゴール未到達です（距離 {Math.Round(distance)}m）";
+            return RedirectToPage("Map", new { runId });
+        }
+
     }
 }
