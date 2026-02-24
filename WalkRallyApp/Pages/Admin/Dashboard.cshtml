@@ -43,7 +43,9 @@
             <div class="app-section-title">運営操作</div>
             <div class="d-grid gap-2">
                 <a class="btn btn-outline-primary" asp-page="/Admin/Announcement">アナウンス送信</a>
-                <button class="btn btn-outline-secondary" disabled>CSV出力（準備中）</button>
+                <form method="post" asp-page-handler="Export">
+                    <button class="btn btn-outline-secondary w-100" type="submit">CSV出力</button>
+                </form>
             </div>
         </div>
     </div>

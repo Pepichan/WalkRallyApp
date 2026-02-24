@@ -63,57 +63,65 @@ namespace WalkRallyApp.Pages
         public async Task<IActionResult> OnGetAsync(int runId)
         {
             var run = await _db.Runs
-                .Include(r => r.Team) // チーム情報も一緒に取得
-                .Include(r => r.Course) // コース情報も一緒に取得（時間制限のため）
-                .FirstOrDefaultAsync(r => r.Id == runId); // ランIDからラン情報を取得
+                .Include(r => r.Team) // チーム情報を取得
+                .Include(r => r.Course) // コース情報を取得
+                .FirstOrDefaultAsync(r => r.Id == runId); // ランIDから取得
 
             if (run == null)
             {
-                return RedirectToPage("Join"); // ランが見つからない場合は受付へリダイレクト
+                return RedirectToPage("Join"); // 見つからなければ受付へ
             }
 
-            TeamName = run.Team.Name; //チーム名を画面に渡す
-
-            var limit = TimeSpan.FromMinutes(run.Course.TimeLimitMinutes); // コースの時間制限をTimeSpanに変換
-            var elapsed = DateTimeOffset.UtcNow - run.StartedAt; // 経過時間を計算（現在時刻 - 開始時刻）
-            var remaining = limit - elapsed; // 残り時間を計算（制限時間 - 経過時間）
-
-            if (remaining < TimeSpan.Zero)
+            if (run.IsFinished)
             {
-                remaining = TimeSpan.Zero; // 残り時間がマイナスになる場合は0にする（時間切れ扱い）
+                return RedirectToPage("Result", new { runId }); // 終了済みなら結果へ
             }
 
-            RemainingTimeText = remaining.ToString(@"mm\:ss"); // 残り時間を「分:秒」形式のテキストに変換
+            TeamName = run.Team.Name; // チーム名を画面へ
 
-            // ? チェックポイント一覧を取得
+            var limit = TimeSpan.FromMinutes(run.Course.TimeLimitMinutes); // 制限時間
+            var elapsed = DateTimeOffset.UtcNow - run.StartedAt; // 経過時間
+
+            if (elapsed >= limit)
+            {
+                // 時間切れなら終了処理
+                run.IsFinished = true;
+                run.FinishedAt = DateTimeOffset.UtcNow;
+                run.ElapsedSeconds = (int)Math.Max(0, elapsed.TotalSeconds);
+                await _db.SaveChangesAsync();
+
+                return RedirectToPage("Result", new { runId }); // 結果へ遷移
+            }
+
+            var remaining = limit - elapsed; // 残り時間
+            RemainingTimeText = remaining.ToString(@"mm\:ss"); // 表示用
+
             Checkpoints = await _db.Checkpoints
-                .Where(c => c.CourseId == run.CourseId) // ランのコースIDに紐づくチェックポイントを取得
-                .OrderBy(c => c.Order) // チェックポイントの順番でソート
+                .Where(c => c.CourseId == run.CourseId)
+                .OrderBy(c => c.Order)
                 .ToListAsync();
 
-            CurrentCheckPoint = Checkpoints.FirstOrDefault(); // とりあえず最初のチェックポイントを現在のチェックポイントとしてセット（後で進行に応じて変更する）
+            CurrentCheckPoint = Checkpoints.FirstOrDefault();
             if (CurrentCheckPoint != null)
             {
                 CurrentQuestion = await _db.Questions
-                    .FirstOrDefaultAsync(q => q.CheckpointId == CurrentCheckPoint.Id); // 現在のチェックポイントに紐づく問題を取得
+                    .FirstOrDefaultAsync(q => q.CheckpointId == CurrentCheckPoint.Id);
                 if (CurrentQuestion != null)
                 {
                     CurrentChoices = await _db.ChoiceOptions
-                        .Where(c => c.QuestionId == CurrentQuestion.Id) // 現在の問題IDに紐づく選択肢を取得
+                        .Where(c => c.QuestionId == CurrentQuestion.Id)
                         .ToListAsync();
                 }
             }
 
-            // ? 写真用のCP（最初のPhoto）
             PhotoCheckpoint = Checkpoints.FirstOrDefault(c => c.Type == CheckpointType.Photo);
 
-            // 直近5件のアナウンスを取得
             Announcements = await _db.Announcements
                 .OrderByDescending(a => a.CreatedAt)
                 .Take(5)
                 .ToListAsync();
 
-            return Page(); // マップ画面を表示
+            return Page();
         }
 
 
