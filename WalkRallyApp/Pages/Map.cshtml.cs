@@ -29,6 +29,10 @@ namespace WalkRallyApp.Pages
         public HashSet<int> ReachedCheckpointIds { get; set; } = new(); // 到達済みチェックポイント
         public List<AlertMessage> Alerts { get; set; } = new(); // 画面表示用の通知
 
+        public bool HasAnsweredQuiz { get; set; }
+        public int? SubmittedChoiceId { get; set; }
+        public string? QuizResultText { get; set; }
+
         // 画面から送信される選択された選択肢ID
         [BindProperty]
         public int SelectedChoiceId { get; set; }
@@ -68,8 +72,9 @@ namespace WalkRallyApp.Pages
         [TempData]
         public string? GoalResult { get; set; }
 
+        public bool ShowGoal { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(int runId, int? checkpointId)
+        public async Task<IActionResult> OnGetAsync(int runId, int? checkpointId, bool showGoal = false)
         {
             var run = await _db.Runs
                 .Include(r => r.Team) // チーム情報を取得
@@ -92,9 +97,14 @@ namespace WalkRallyApp.Pages
             var elapsed = DateTimeOffset.UtcNow - run.StartedAt; // 経過時間
             var remaining = limit - elapsed; // 残り時間
 
-            if (remaining < TimeSpan.Zero)
+            if (remaining <= TimeSpan.Zero)
             {
-                remaining = TimeSpan.Zero;
+                run.IsFinished = true;
+                run.FinishedAt = DateTimeOffset.UtcNow;
+                run.ElapsedSeconds = (int)Math.Max(0, (run.FinishedAt.Value - run.StartedAt).TotalSeconds);
+                await _db.SaveChangesAsync();
+
+                return RedirectToPage("Result", new { runId });
             }
 
             RemainingTimeText = remaining.ToString(@"mm\:ss"); // 表示用
@@ -104,22 +114,58 @@ namespace WalkRallyApp.Pages
                 .OrderBy(c => c.Order)
                 .ToListAsync();
 
-            CurrentCheckPoint = checkpointId.HasValue
-                ? Checkpoints.FirstOrDefault(c => c.Id == checkpointId.Value)
-                : Checkpoints.FirstOrDefault();
-            if (CurrentCheckPoint != null && CurrentCheckPoint.Type == CheckpointType.Quiz)
-            {
-                CurrentQuestion = await _db.Questions
-                    .FirstOrDefaultAsync(q => q.CheckpointId == CurrentCheckPoint.Id);
-                if (CurrentQuestion != null)
-                {
-                    CurrentChoices = await _db.ChoiceOptions
-                        .Where(c => c.QuestionId == CurrentQuestion.Id)
-                        .ToListAsync();
-                }
-            }
+            ShowGoal = showGoal;
 
-            PhotoCheckpoint = CurrentCheckPoint?.Type == CheckpointType.Photo ? CurrentCheckPoint : null;
+            if (!ShowGoal)
+            {
+                CurrentCheckPoint = checkpointId.HasValue
+                    ? Checkpoints.FirstOrDefault(c => c.Id == checkpointId.Value)
+                    : Checkpoints.FirstOrDefault();
+                if (CurrentCheckPoint != null && CurrentCheckPoint.Type == CheckpointType.Quiz)
+                {
+                    CurrentQuestion = await _db.Questions
+                        .FirstOrDefaultAsync(q => q.CheckpointId == CurrentCheckPoint.Id);
+                    if (CurrentQuestion != null)
+                    {
+                        CurrentChoices = await _db.ChoiceOptions
+                            .Where(c => c.QuestionId == CurrentQuestion.Id)
+                            .ToListAsync();
+                    }
+
+                    var quizSubmission = await _db.Submissions
+                        .FirstOrDefaultAsync(s =>
+                            s.RunId == runId &&
+                            s.CheckpointId == CurrentCheckPoint.Id &&
+                            s.Kind == SubmissionKind.Quiz);
+
+                    if (quizSubmission != null)
+                    {
+                        HasAnsweredQuiz = true;
+                        if (int.TryParse(quizSubmission.AnswerText, out var choiceId))
+                        {
+                            SubmittedChoiceId = choiceId;
+                        }
+
+                        QuizResultText = quizSubmission.IsCorrect == true
+                            ? "正解！＋１０点"
+                            : "不正解！（加点なし）";
+                    }
+                }
+
+                if (QuizResultText == null && !string.IsNullOrWhiteSpace(AnswerResult))
+                {
+                    QuizResultText = AnswerResult;
+                }
+
+                PhotoCheckpoint = CurrentCheckPoint?.Type == CheckpointType.Photo ? CurrentCheckPoint : null;
+            }
+            else
+            {
+                CurrentCheckPoint = null;
+                CurrentQuestion = null;
+                CurrentChoices.Clear();
+                PhotoCheckpoint = null;
+            }
 
             Announcements = await _db.Announcements
                 .OrderByDescending(a => a.CreatedAt)
@@ -141,7 +187,6 @@ namespace WalkRallyApp.Pages
 
         private void BuildAlerts()
         {
-            AddAlert(AnswerResult, "alert-info");
             AddAlert(ReachResult, "alert-warning");
             AddAlert(PhotoResult, "alert-success");
             AddAlert(GoalResult, "alert-warning");
@@ -201,7 +246,6 @@ namespace WalkRallyApp.Pages
             return RedirectToPage("Map", new { runId, checkpointId });
         }
 
-
         // QR到達判定
         public async Task<IActionResult> OnPostReachQrAsync(int runId, int checkpointId)
         {
@@ -234,7 +278,6 @@ namespace WalkRallyApp.Pages
             return RedirectToPage("Map", new { runId, checkpointId });
         }
 
-
         public async Task<IActionResult> OnPostAnswerAsync(int runId, int checkpointId)
         {
             var run = await _db.Runs
@@ -246,6 +289,17 @@ namespace WalkRallyApp.Pages
                 return RedirectToPage("Join");
             }
 
+            var exists = await _db.Submissions.AnyAsync(s =>
+                s.RunId == runId &&
+                s.CheckpointId == checkpointId &&
+                s.Kind == SubmissionKind.Quiz);
+
+            if (exists)
+            {
+                AnswerResult = "すでに回答済みです。";
+                return RedirectToPage("Map", new { runId, checkpointId });
+            }
+
             var checkpoint = await _db.Checkpoints
                 .FirstOrDefaultAsync(c => c.Id == checkpointId && c.CourseId == run.CourseId);
 
@@ -255,7 +309,7 @@ namespace WalkRallyApp.Pages
             }
 
             var choice = await _db.ChoiceOptions
-                 .FirstOrDefaultAsync(c => c.Id == SelectedChoiceId); // 選択された選択肢が現在のチェックポイントの問題に紐づいているか確認
+                .FirstOrDefaultAsync(c => c.Id == SelectedChoiceId); // 選択された選択肢が現在のチェックポイントの問題に紐づいているか確認
 
             var isCorrect = choice != null && choice.IsCorrect; // 選択された選択肢が正解かどうか
             var points = isCorrect ? checkpoint.Points : 0; // 正解ならチェックポイントの点数、そうでなければ0点
@@ -266,7 +320,8 @@ namespace WalkRallyApp.Pages
                 CheckpointId = checkpoint.Id,
                 Kind = SubmissionKind.Quiz,
                 IsCorrect = isCorrect,
-                Points = points
+                Points = points,
+                AnswerText = choice?.Id.ToString()
             };
 
             _db.Submissions.Add(submission); // 提出情報をデータベースに追加
@@ -350,7 +405,6 @@ namespace WalkRallyApp.Pages
             return RedirectToPage("Map", new { runId, checkpointId });
         }
 
-
         // ゴール到達判定（QR）
         public async Task<IActionResult> OnPostReachGoalQrAsync(int runId)
         {
@@ -391,7 +445,6 @@ namespace WalkRallyApp.Pages
 
             return RedirectToPage("Result", new { runId });
         }
-
 
         // ゴール到達判定（GPS）
         public async Task<IActionResult> OnPostReachGoalGpsAsync(int runId)
@@ -438,7 +491,6 @@ namespace WalkRallyApp.Pages
             GoalResult = $"ゴール未到達です（距離 {Math.Round(distance)}m）";
             return RedirectToPage("Map", new { runId });
         }
-
 
         // 距離計算（ハバースイン）
         private static double CalculateDistanceMeters(double lat1, double lng1, double lat2, double lng2)

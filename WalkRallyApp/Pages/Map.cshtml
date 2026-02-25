@@ -5,6 +5,10 @@
     var runId = Request.Query["runId"];
     var currentId = Model.CurrentCheckPoint?.Id;
     var reached = Model.ReachedCheckpointIds;
+    var isQuiz = Model.CurrentCheckPoint?.Type == CheckpointType.Quiz;
+    var isPhoto = Model.CurrentCheckPoint?.Type == CheckpointType.Photo;
+    var isInfo = Model.CurrentCheckPoint?.Type == CheckpointType.Info;
+    var showGoal = Model.ShowGoal;
 }
 
 <div class="app-page">
@@ -47,128 +51,168 @@
         }
 
         <div class="app-section">
-            <div class="app-section-title">現在のチェックポイント</div>
-            @if (Model.CurrentCheckPoint != null)
-            {
-                var reachedCurrent = reached.Contains(Model.CurrentCheckPoint.Id);
-                <div class="app-info-bar">
-                    <div>
-                        <div class="app-label">番号</div>
-                        <div class="app-value">#@Model.CurrentCheckPoint.Order</div>
-                    </div>
-                    <div>
-                        <div class="app-label">種類</div>
-                        <div class="app-value">@Model.CurrentCheckPoint.Type</div>
-                    </div>
-                    <div class="text-end">
-                        <div class="app-label">得点</div>
-                        <div class="app-value">@Model.CurrentCheckPoint.Points 点</div>
-                    </div>
-                </div>
-                <div class="app-status-pill @(reachedCurrent ? "app-status-pill--done" : "app-status-pill--pending")">
-                    @(reachedCurrent ? "到達済み" : "未到達")
-                </div>
-            }
-        </div>
-
-        <div class="app-grid">
-            <div class="app-panel">
-                <div class="app-panel-title">クイズ</div>
-                <div class="app-panel-note">正解すると得点が加算されます。</div>
-                @if (Model.CurrentQuestion != null)
-                {
-                    <form method="post" asp-page-handler="Answer">
-                        <input type="hidden" name="runId" value="@runId" />
-                        <input type="hidden" name="checkpointId" value="@currentId" />
-                        <p class="mb-3">@Model.CurrentQuestion.TextJa</p>
-
-                        @foreach (var choice in Model.CurrentChoices)
-                        {
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="SelectedChoiceId" value="@choice.Id" id="choice_@choice.Id" />
-                                <label class="form-check-label" for="choice_@choice.Id">@choice.TextJa</label>
-                            </div>
-                        }
-
-                        <button class="btn btn-primary mt-3 w-100" type="submit">回答送信</button>
-                    </form>
-                }
-                else
-                {
-                    <div class="text-muted">このチェックポイントにはクイズがありません。</div>
-                }
+            <div class="app-section-title">
+                チェックポイント一覧
+                <span class="app-section-note">一覧をクリックして詳細を表示</span>
             </div>
-
-            <div class="app-panel">
-                <div class="app-panel-title">到達判定</div>
-                <div class="app-panel-note">GPSが使えない場合はQRで判定してください。</div>
-
-                <form method="post" asp-page-handler="ReachGps" class="mb-2">
-                    <input type="hidden" name="runId" value="@runId" />
-                    <input type="hidden" name="checkpointId" value="@currentId" />
-                    <input type="hidden" class="gps-lat" name="Lat" />
-                    <input type="hidden" class="gps-lng" name="Lng" />
-                    <button class="btn btn-outline-primary w-100" type="button" data-gps-submit="true">GPSで判定</button>
-                </form>
-
-                <form method="post" asp-page-handler="ReachQr">
-                    <input type="hidden" name="runId" value="@runId" />
-                    <input type="hidden" name="checkpointId" value="@currentId" />
-                    <input class="form-control mb-2" name="QrInput" placeholder="QRコードの文字列を入力" />
-                    <button class="btn btn-outline-secondary w-100" type="submit">QRで判定</button>
-                </form>
-            </div>
-
-            @if (Model.CurrentCheckPoint?.Type == CheckpointType.Photo)
-            {
-                <div class="app-panel">
-                    <div class="app-panel-title">写真ミッション</div>
-                    <div class="app-panel-note">写真を撮影して提出すると得点が加算されます。</div>
-                    <form method="post" asp-page-handler="Photo" enctype="multipart/form-data">
-                        <input type="hidden" name="runId" value="@runId" />
-                        <input type="hidden" name="checkpointId" value="@currentId" />
-                        <input type="file" name="PhotoFile" accept="image/*" class="form-control mb-2" />
-                        <button class="btn btn-outline-secondary w-100" type="submit">写真を送信</button>
-                    </form>
-                </div>
-            }
-
-            <div class="app-panel">
-                <div class="app-panel-title">ゴール判定</div>
-                <div class="app-panel-note">ゴール地点で判定してください。</div>
-
-                <form method="post" asp-page-handler="ReachGoalGps" class="mb-2">
-                    <input type="hidden" name="runId" value="@runId" />
-                    <input type="hidden" class="gps-lat" name="Lat" />
-                    <input type="hidden" class="gps-lng" name="Lng" />
-                    <button class="btn btn-outline-success w-100" type="button" data-gps-submit="true">ゴール判定（GPS）</button>
-                </form>
-
-                <form method="post" asp-page-handler="ReachGoalQr">
-                    <input type="hidden" name="runId" value="@runId" />
-                    <input class="form-control mb-2" name="GoalQrInput" placeholder="ゴールQRの文字列を入力" />
-                    <button class="btn btn-outline-success w-100" type="submit">ゴール判定（QR）</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="app-section">
-            <div class="app-section-title">チェックポイント一覧</div>
-            <ul class="list-group list-group-flush">
+            <ul class="list-group list-group-flush app-checkpoint-list">
                 @foreach (var cp in Model.Checkpoints)
                 {
-                    var isCurrent = cp.Id == currentId;
+                    var isCurrent = cp.Id == currentId && !showGoal;
                     var isReached = reached.Contains(cp.Id);
-                    <li class="list-group-item d-flex justify-content-between align-items-center app-checkpoint-item @(isCurrent ? "app-checkpoint-item--current" : string.Empty)">
-                        <div class="app-checkpoint-main">
-                            <a class="text-decoration-none" asp-page="Map" asp-route-runId="@runId" asp-route-checkpointId="@cp.Id">
-                                #@cp.Order - @cp.Type
-                            </a>
-                            <span class="app-badge @(isReached ? "app-badge--done" : "app-badge--pending")">
-                                @(isReached ? "到達済み" : "未到達")
-                            </span>
+                    var detailId = $"detail-cp-{cp.Id}";
+
+                    <li id="cp-@cp.Id" class="list-group-item app-checkpoint-item">
+                        <a class="app-checkpoint-link @(isCurrent ? "app-checkpoint-link--current" : string.Empty)"
+                           asp-page="Map"
+                           asp-route-runId="@runId"
+                           asp-route-checkpointId="@cp.Id"
+                           asp-route-showGoal="false"
+                           asp-fragment="cp-@cp.Id"
+                           data-detail-target="@detailId"
+                           data-is-current="@isCurrent.ToString().ToLower()"
+                           aria-expanded="@isCurrent.ToString().ToLower()">
+                            <div>
+                                <div class="app-checkpoint-title">#@cp.Order - @cp.Type</div>
+                                <div class="app-checkpoint-meta">
+                                    <span class="app-badge @(isReached ? "app-badge--done" : "app-badge--pending")">
+                                        @(isReached ? "到達済み" : "未到達")
+                                    </span>
+                                </div>
+                            </div>
+                            <span class="app-checkpoint-points">@cp.Points 点</span>
+                        </a>
+                    </li>
+
+                    @if (isCurrent && Model.CurrentCheckPoint != null)
+                    {
+                        var current = Model.CurrentCheckPoint;
+                        <li id="@detailId" class="list-group-item app-checkpoint-detail app-detail-collapsible app-detail-collapsible--open">
+                            <div class="app-checkpoint-detail-card">
+                                <div class="app-grid mt-3">
+                                    @if (isQuiz)
+                                    {
+                                        <div class="app-panel app-panel--wide">
+                                            <div class="app-panel-title">クイズ</div>
+                                            <div class="app-panel-note">正解すると得点が加算されます。</div>
+
+                                            @if (!string.IsNullOrWhiteSpace(Model.QuizResultText))
+                                            {
+                                                <div class="alert alert-info">@Model.QuizResultText</div>
+                                            }
+
+                                            @if (Model.CurrentQuestion != null)
+                                            {
+                                                <form method="post" asp-page-handler="Answer">
+                                                    <input type="hidden" name="runId" value="@runId" />
+                                                    <input type="hidden" name="checkpointId" value="@currentId" />
+                                                    <p class="mb-3">@Model.CurrentQuestion.TextJa</p>
+
+                                                    @foreach (var choice in Model.CurrentChoices)
+                                                    {
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input"
+                                                                   type="radio"
+                                                                   name="SelectedChoiceId"
+                                                                   value="@choice.Id"
+                                                                   id="choice_@choice.Id"
+                                                                   checked="@(Model.SubmittedChoiceId == choice.Id)"
+                                                                   disabled="@Model.HasAnsweredQuiz" />
+                                                            <label class="form-check-label" for="choice_@choice.Id">@choice.TextJa</label>
+                                                        </div>
+                                                    }
+
+                                                    <button class="btn btn-primary mt-3 w-100" type="submit" disabled="@Model.HasAnsweredQuiz">回答送信</button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <div class="text-muted">このチェックポイントにはクイズがありません。</div>
+                                            }
+                                        </div>
+                                    }
+
+                                    @if (isInfo)
+                                    {
+                                        <div class="app-panel">
+                                            <div class="app-panel-title">到達判定</div>
+                                            <div class="app-panel-note">GPSが使えない場合はQRで判定してください。</div>
+
+                                            <form method="post" asp-page-handler="ReachGps" class="mb-2">
+                                                <input type="hidden" name="runId" value="@runId" />
+                                                <input type="hidden" name="checkpointId" value="@currentId" />
+                                                <input type="hidden" class="gps-lat" name="Lat" />
+                                                <input type="hidden" class="gps-lng" name="Lng" />
+                                                <button class="btn btn-outline-primary w-100" type="button" data-gps-submit="true">GPSで判定</button>
+                                            </form>
+
+                                            <form method="post" asp-page-handler="ReachQr">
+                                                <input type="hidden" name="runId" value="@runId" />
+                                                <input type="hidden" name="checkpointId" value="@currentId" />
+                                                <input class="form-control mb-2" name="QrInput" placeholder="QRコードの文字列を入力" />
+                                                <button class="btn btn-outline-secondary w-100" type="submit">QRで判定</button>
+                                            </form>
+                                        </div>
+                                    }
+
+                                    @if (isPhoto)
+                                    {
+                                        <div class="app-panel">
+                                            <div class="app-panel-title">写真ミッション</div>
+                                            <div class="app-panel-note">写真を撮影して提出すると得点が加算されます。</div>
+                                            <form method="post" asp-page-handler="Photo" enctype="multipart/form-data">
+                                                <input type="hidden" name="runId" value="@runId" />
+                                                <input type="hidden" name="checkpointId" value="@currentId" />
+                                                <input type="file" name="PhotoFile" accept="image/*" class="form-control mb-2" />
+                                                <button class="btn btn-outline-secondary w-100" type="submit">写真を送信</button>
+                                            </form>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </li>
+                    }
+                }
+
+                <li id="cp-goal" class="list-group-item app-checkpoint-item">
+                    <a class="app-checkpoint-link @(showGoal ? "app-checkpoint-link--current" : string.Empty)"
+                       asp-page="Map"
+                       asp-route-runId="@runId"
+                       asp-route-showGoal="true"
+                       asp-fragment="cp-goal"
+                       data-detail-target="detail-goal"
+                       data-is-current="@showGoal.ToString().ToLower()"
+                       aria-expanded="@showGoal.ToString().ToLower()">
+                        <div>
+                            <div class="app-checkpoint-title">ゴール判定</div>
+                            <div class="app-checkpoint-meta">
+                                <span class="app-badge app-badge--pending">ゴール</span>
+                            </div>
                         </div>
-                        <span class="badge bg-secondary">@cp.Points 点</span>
+                        <span class="app-checkpoint-points">判定</span>
+                    </a>
+                </li>
+
+                @if (showGoal)
+                {
+                    <li id="detail-goal" class="list-group-item app-checkpoint-detail app-detail-collapsible app-detail-collapsible--open">
+                        <div class="app-checkpoint-detail-card">
+                            <div class="app-checkpoint-detail-title">ゴール判定</div>
+                            <div class="app-panel-note">ゴール地点で判定してください。</div>
+
+                            <form method="post" asp-page-handler="ReachGoalGps" class="mb-2">
+                                <input type="hidden" name="runId" value="@runId" />
+                                <input type="hidden" class="gps-lat" name="Lat" />
+                                <input type="hidden" class="gps-lng" name="Lng" />
+                                <button class="btn btn-outline-success w-100" type="button" data-gps-submit="true">ゴール判定（GPS）</button>
+                            </form>
+
+                            <form method="post" asp-page-handler="ReachGoalQr">
+                                <input type="hidden" name="runId" value="@runId" />
+                                <input class="form-control mb-2" name="GoalQrInput" placeholder="ゴールQRの文字列を入力" />
+                                <button class="btn btn-outline-success w-100" type="submit">ゴール判定（QR）</button>
+                            </form>
+                        </div>
                     </li>
                 }
             </ul>
@@ -203,6 +247,30 @@
                     {
                         alert("位置情報の取得に失敗しました。");
                     });
+                });
+            });
+
+            document.querySelectorAll(".app-checkpoint-link[data-detail-target]").forEach((link) =>
+            {
+                link.addEventListener("click", (event) =>
+                {
+                    if (link.dataset.isCurrent !== "true")
+                    {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const targetId = link.dataset.detailTarget;
+                    const detail = document.getElementById(targetId);
+                    if (!detail)
+                    {
+                        return;
+                    }
+
+                    detail.classList.toggle("app-detail-collapsible--open");
+                    const expanded = detail.classList.contains("app-detail-collapsible--open");
+                    link.setAttribute("aria-expanded", expanded.toString());
                 });
             });
         </script>

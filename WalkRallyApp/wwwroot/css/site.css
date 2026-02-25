@@ -289,3 +289,96 @@ html {
   color: #92400e;
   border-color: #fcd34d;
 }
+
+.app-section-note {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-left: 8px;
+}
+
+.app-checkpoint-list {
+  display: grid;
+  gap: 10px;
+}
+
+.app-checkpoint-item,
+.app-checkpoint-detail {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.app-checkpoint-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.app-checkpoint-link:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.app-checkpoint-link--current {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.app-checkpoint-title {
+  font-weight: 600;
+}
+
+.app-checkpoint-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.app-checkpoint-points {
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.app-checkpoint-detail-card {
+  margin: 6px 0 14px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #3b82f6;
+  background: #f8fafc;
+  width: 100%;
+}
+
+.app-checkpoint-detail .app-grid {
+  grid-template-columns: 1fr;
+}
+
+.app-checkpoint-detail-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.app-detail-collapsible {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+
+.app-detail-collapsible--open {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+.app-panel--wide {
+  grid-column: 1 / -1;
+}
