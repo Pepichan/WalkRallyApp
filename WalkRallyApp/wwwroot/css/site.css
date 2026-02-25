@@ -221,3 +221,71 @@ html {
     border-color: #eef2f7;
     background: #ffffff;
 }
+
+.app-alerts .alert {
+  margin-bottom: 8px;
+}
+
+.app-panel-note {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.app-checkpoint-item {
+  gap: 12px;
+}
+
+.app-checkpoint-item--current {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.app-checkpoint-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.app-badge--done {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.app-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.app-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  margin-top: 8px;
+}
+
+.app-status-pill--done {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.app-status-pill--pending {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}

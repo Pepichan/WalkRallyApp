@@ -26,6 +26,8 @@ namespace WalkRallyApp.Pages
         public List<ChoiceOption> CurrentChoices { get; set; } = new(); // 画面に渡す現在の選択肢のリスト
         public Checkpoint? PhotoCheckpoint { get; set; } // 画面に渡す写真CP
         public List<Announcement> Announcements { get; set; } = new(); // 直近アナウンス
+        public HashSet<int> ReachedCheckpointIds { get; set; } = new(); // 到達済みチェックポイント
+        public List<AlertMessage> Alerts { get; set; } = new(); // 画面表示用の通知
 
         // 画面から送信される選択された選択肢ID
         [BindProperty]
@@ -124,9 +126,46 @@ namespace WalkRallyApp.Pages
                 .Take(5)
                 .ToListAsync();
 
+            var reachedIds = await _db.Submissions
+                .Where(s => s.RunId == runId)
+                .Select(s => s.CheckpointId)
+                .Distinct()
+                .ToListAsync();
+
+            ReachedCheckpointIds = reachedIds.ToHashSet();
+
+            BuildAlerts();
+
             return Page();
         }
 
+        private void BuildAlerts()
+        {
+            AddAlert(AnswerResult, "alert-info");
+            AddAlert(ReachResult, "alert-warning");
+            AddAlert(PhotoResult, "alert-success");
+            AddAlert(GoalResult, "alert-warning");
+        }
+
+        private void AddAlert(string? message, string cssClass)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            Alerts.Add(new AlertMessage
+            {
+                Message = message,
+                CssClass = cssClass
+            });
+        }
+
+        public class AlertMessage
+        {
+            public string Message { get; set; } = string.Empty;
+            public string CssClass { get; set; } = "alert-info";
+        }
 
         // GPS到達判定
         public async Task<IActionResult> OnPostReachGpsAsync(int runId, int checkpointId)
