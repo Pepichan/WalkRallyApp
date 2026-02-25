@@ -19,14 +19,13 @@ namespace WalkRallyApp.Pages
         }
 
         public string TeamName { get; set; } = string.Empty; // 画面に渡すチーム名
-        public string RemainingTimeText { get; set; } = "00:00"; // 画面に渡す残り時間テキスト（初期値は00:00）
+        public string RemainingTimeText { get; set; } = "00:00"; // 画面に渡す残り時間テキスト
         public List<Checkpoint> Checkpoints { get; set; } = new(); // 画面に渡すチェックポイントのリスト
-        public Checkpoint? CurrentCheckPoint { get; set; } // 画面に渡す現在のチェックポイント（初期値はnull）
-        public Question? CurrentQuestion { get; set; } // 画面に渡す現在の問題（初期値はnull）
-        public List<ChoiceOption> CurrentChoices { get; set; } = new(); // 画面に渡す現在の選択肢のリスト（初期値は空リスト）
+        public Checkpoint? CurrentCheckPoint { get; set; } // 画面に渡す現在のチェックポイント
+        public Question? CurrentQuestion { get; set; } // 画面に渡す現在の問題
+        public List<ChoiceOption> CurrentChoices { get; set; } = new(); // 画面に渡す現在の選択肢のリスト
         public Checkpoint? PhotoCheckpoint { get; set; } // 画面に渡す写真CP
         public List<Announcement> Announcements { get; set; } = new(); // 直近アナウンス
-
 
         // 画面から送信される選択された選択肢ID
         [BindProperty]
@@ -68,7 +67,7 @@ namespace WalkRallyApp.Pages
         public string? GoalResult { get; set; }
 
 
-        public async Task<IActionResult> OnGetAsync(int runId)
+        public async Task<IActionResult> OnGetAsync(int runId, int? checkpointId)
         {
             var run = await _db.Runs
                 .Include(r => r.Team) // チーム情報を取得
@@ -89,19 +88,13 @@ namespace WalkRallyApp.Pages
 
             var limit = TimeSpan.FromMinutes(run.Course.TimeLimitMinutes); // 制限時間
             var elapsed = DateTimeOffset.UtcNow - run.StartedAt; // 経過時間
+            var remaining = limit - elapsed; // 残り時間
 
-            if (elapsed >= limit)
+            if (remaining < TimeSpan.Zero)
             {
-                // 時間切れなら終了処理
-                run.IsFinished = true;
-                run.FinishedAt = DateTimeOffset.UtcNow;
-                run.ElapsedSeconds = (int)Math.Max(0, elapsed.TotalSeconds);
-                await _db.SaveChangesAsync();
-
-                return RedirectToPage("Result", new { runId }); // 結果へ遷移
+                remaining = TimeSpan.Zero;
             }
 
-            var remaining = limit - elapsed; // 残り時間
             RemainingTimeText = remaining.ToString(@"mm\:ss"); // 表示用
 
             Checkpoints = await _db.Checkpoints
@@ -109,8 +102,10 @@ namespace WalkRallyApp.Pages
                 .OrderBy(c => c.Order)
                 .ToListAsync();
 
-            CurrentCheckPoint = Checkpoints.FirstOrDefault();
-            if (CurrentCheckPoint != null)
+            CurrentCheckPoint = checkpointId.HasValue
+                ? Checkpoints.FirstOrDefault(c => c.Id == checkpointId.Value)
+                : Checkpoints.FirstOrDefault();
+            if (CurrentCheckPoint != null && CurrentCheckPoint.Type == CheckpointType.Quiz)
             {
                 CurrentQuestion = await _db.Questions
                     .FirstOrDefaultAsync(q => q.CheckpointId == CurrentCheckPoint.Id);
@@ -122,7 +117,7 @@ namespace WalkRallyApp.Pages
                 }
             }
 
-            PhotoCheckpoint = Checkpoints.FirstOrDefault(c => c.Type == CheckpointType.Photo);
+            PhotoCheckpoint = CurrentCheckPoint?.Type == CheckpointType.Photo ? CurrentCheckPoint : null;
 
             Announcements = await _db.Announcements
                 .OrderByDescending(a => a.CreatedAt)
@@ -146,7 +141,7 @@ namespace WalkRallyApp.Pages
             if (checkpoint == null || Lat == null || Lng == null)
             {
                 ReachResult = "位置情報が取得できませんでした。";
-                return RedirectToPage("Map", new { runId });
+                return RedirectToPage("Map", new { runId, checkpointId });
             }
 
             var distance = CalculateDistanceMeters(Lat.Value, Lng.Value, checkpoint.Lat, checkpoint.Lng);
@@ -164,7 +159,7 @@ namespace WalkRallyApp.Pages
                 ReachResult = $"未到達です（距離 {Math.Round(distance)}m）";
             }
 
-            return RedirectToPage("Map", new { runId });
+            return RedirectToPage("Map", new { runId, checkpointId });
         }
 
 
@@ -181,7 +176,7 @@ namespace WalkRallyApp.Pages
             if (checkpoint == null || string.IsNullOrWhiteSpace(QrInput))
             {
                 ReachResult = "QRコードが読み取れませんでした。";
-                return RedirectToPage("Map", new { runId });
+                return RedirectToPage("Map", new { runId, checkpointId });
             }
 
             if (checkpoint.QrToken == QrInput)
@@ -197,11 +192,11 @@ namespace WalkRallyApp.Pages
                 ReachResult = "QRコードが一致しません。";
             }
 
-            return RedirectToPage("Map", new { runId });
+            return RedirectToPage("Map", new { runId, checkpointId });
         }
 
 
-        public async Task<IActionResult> OnPostAnswerAsync(int runId)
+        public async Task<IActionResult> OnPostAnswerAsync(int runId, int checkpointId)
         {
             var run = await _db.Runs
                 .Include(r => r.Course)
@@ -213,12 +208,11 @@ namespace WalkRallyApp.Pages
             }
 
             var checkpoint = await _db.Checkpoints
-                .OrderBy(c => c.Order) // チェックポイントの順番でソート
-                .FirstOrDefaultAsync(c => c.CourseId == run.CourseId); // とりあえず最初のチェックポイントを取得（後で進行に応じて変更する）
+                .FirstOrDefaultAsync(c => c.Id == checkpointId && c.CourseId == run.CourseId);
 
             if (checkpoint == null)
             {
-                return RedirectToPage("Map", new { runId }); // チェックポイントが見つからない場合はマップにリダイレクト
+                return RedirectToPage("Map", new { runId, checkpointId });
             }
 
             var choice = await _db.ChoiceOptions
@@ -242,10 +236,10 @@ namespace WalkRallyApp.Pages
             await _db.SaveChangesAsync();
 
             AnswerResult = isCorrect ? "正解！＋１０点" : "不正解！（加点なし）"; // 結果表示用のメッセージをセット
-            return RedirectToPage("Map", new { runId }); // マップにリダイレクトして結果を表示
+            return RedirectToPage("Map", new { runId, checkpointId }); // マップにリダイレクトして結果を表示
         }
 
-        public async Task<IActionResult> OnPostPhotoAsync(int runId)
+        public async Task<IActionResult> OnPostPhotoAsync(int runId, int checkpointId)
         {
             var run = await _db.Runs
                 .Include(r => r.Course)
@@ -261,19 +255,17 @@ namespace WalkRallyApp.Pages
             if (PhotoFile == null || PhotoFile.Length == 0)
             {
                 PhotoResult = "ファイルが選択されていません。";
-                return RedirectToPage("Map", new { runId });
+                return RedirectToPage("Map", new { runId, checkpointId });
             }
 
             // ? 写真用チェックポイント取得
             var photoCheckpoint = await _db.Checkpoints
-                .Where(c => c.CourseId == run.CourseId && c.Type == CheckpointType.Photo)
-                .OrderBy(c => c.Order)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(c => c.Id == checkpointId && c.Type == CheckpointType.Photo);
 
             if (photoCheckpoint == null)
             {
                 PhotoResult = "写真用のチェックポイントが見つかりませんでした。";
-                return RedirectToPage("Map", new { runId });
+                return RedirectToPage("Map", new { runId, checkpointId });
             }
 
             // ? 拡張子チェック（jpg/pngのみ許可）
@@ -282,7 +274,7 @@ namespace WalkRallyApp.Pages
             if (!allowed.Contains(extension))
             {
                 PhotoResult = "無効なファイル形式です。jpgまたはpngをアップロードしてください。";
-                return RedirectToPage("Map", new { runId });
+                return RedirectToPage("Map", new { runId, checkpointId });
             }
 
             // ? 保存先（wwwroot/uploads）
@@ -316,55 +308,7 @@ namespace WalkRallyApp.Pages
             await _db.SaveChangesAsync();
 
             PhotoResult = "写真を提出しました！＋１０点";
-            return RedirectToPage("Map", new { runId });
-        }
-
-
-        // 距離計算（ハバースイン）
-        private static double CalculateDistanceMeters(double lat1, double lng1, double lat2, double lng2)
-        {
-            const double R = 6371000; // 地球の半径（メートル）
-            var dLat = ToRad(lat2 - lat1);
-            var dLng = ToRad(lng2 - lng1);
-
-            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                    Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2)) *
-                    Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
-
-            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            return R * c; // 距離をメートルで返す
-        }
-
-        private static double ToRad(double deg) => deg * (Math.PI / 180); // 度をラジアンに変換
-
-        // ? 到達保存の共通処理
-        private async Task<bool> SaveReachAsync(Run run, Checkpoint checkpoint)
-        {
-            // 既に到達済みか確認（2重加算防止）
-            var exists = await _db.Submissions.AnyAsync(s =>
-                s.RunId == run.Id &&
-                s.CheckpointId == checkpoint.Id &&
-                s.Kind == SubmissionKind.Reach);
-
-            if (exists)
-            {
-                return false;
-            }
-
-            var submission = new Submission
-            {
-                RunId = run.Id,
-                CheckpointId = checkpoint.Id,
-                Kind = SubmissionKind.Reach,
-                Points = checkpoint.Points,
-                IsCorrect = null // 到達なので正誤は不要
-            };
-
-            _db.Submissions.Add(submission);
-            run.Score += checkpoint.Points; // ? スコア加算
-
-            await _db.SaveChangesAsync();
-            return true;
+            return RedirectToPage("Map", new { runId, checkpointId });
         }
 
 
@@ -456,5 +400,52 @@ namespace WalkRallyApp.Pages
             return RedirectToPage("Map", new { runId });
         }
 
+
+        // 距離計算（ハバースイン）
+        private static double CalculateDistanceMeters(double lat1, double lng1, double lat2, double lng2)
+        {
+            const double R = 6371000; // 地球の半径（メートル）
+            var dLat = ToRad(lat2 - lat1);
+            var dLng = ToRad(lng2 - lng1);
+
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2)) *
+                    Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c; // 距離をメートルで返す
+        }
+
+        private static double ToRad(double deg) => deg * (Math.PI / 180); // 度をラジアンに変換
+
+        // ? 到達保存の共通処理
+        private async Task<bool> SaveReachAsync(Run run, Checkpoint checkpoint)
+        {
+            // 既に到達済みか確認（2重加算防止）
+            var exists = await _db.Submissions.AnyAsync(s =>
+                s.RunId == run.Id &&
+                s.CheckpointId == checkpoint.Id &&
+                s.Kind == SubmissionKind.Reach);
+
+            if (exists)
+            {
+                return false;
+            }
+
+            var submission = new Submission
+            {
+                RunId = run.Id,
+                CheckpointId = checkpoint.Id,
+                Kind = SubmissionKind.Reach,
+                Points = checkpoint.Points,
+                IsCorrect = null // 到達なので正誤は不要
+            };
+
+            _db.Submissions.Add(submission);
+            run.Score += checkpoint.Points; // ? スコア加算
+
+            await _db.SaveChangesAsync();
+            return true;
+        }
     }
 }

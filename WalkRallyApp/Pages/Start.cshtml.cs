@@ -61,7 +61,7 @@ namespace WalkRallyApp.Pages
 
         private async Task<Course> EnsureDefaultCourseAsync()
         {
-            var course = await _db.Courses.FirstOrDefaultAsync(); //コースが存在するか確認
+            var course = await _db.Courses.FirstOrDefaultAsync();
             if (course == null)
             {
                 course = new Course
@@ -75,84 +75,106 @@ namespace WalkRallyApp.Pages
                     GoalQrToken = "GOAL001"
                 };
 
-                _db.Courses.Add(course); //新規コースを追加
+                _db.Courses.Add(course);
                 await _db.SaveChangesAsync();
             }
 
             if (string.IsNullOrWhiteSpace(course.GoalQrToken))
             {
-                course.GoalQrToken = "GOAL001"; // ゴールQRの既定値
+                course.GoalQrToken = "GOAL001";
                 await _db.SaveChangesAsync();
             }
 
-            // ✅ デフォルトのチェックポイントを追加（MVP用の仮データ）
-            var hasCheckpoint = await _db.Checkpoints.AnyAsync(c => c.CourseId == course.Id);
-            if (!hasCheckpoint)
+            // チェックポイントを追加（不足分のみ）
+            var cp1 = await EnsureCheckpointAsync(course.Id, 1, CheckpointType.Quiz, "CP001", 10);
+            await EnsureCheckpointAsync(course.Id, 2, CheckpointType.Photo, "CP002", 20);
+            await EnsureCheckpointAsync(course.Id, 3, CheckpointType.Info, "CP003", 10);
+            var cp4 = await EnsureCheckpointAsync(course.Id, 4, CheckpointType.Quiz, "CP004", 10);
+            var cp5 = await EnsureCheckpointAsync(course.Id, 5, CheckpointType.Quiz, "CP005", 10);
+            await EnsureCheckpointAsync(course.Id, 6, CheckpointType.Photo, "CP006", 20);
+
+            // クイズ1（既存があれば維持）
+            await EnsureChoiceQuestionAsync(cp1, "シドニーがある州は？",
+                ("ニューサウスウェールズ州", true),
+                ("ビクトリア州", false),
+                ("クイーンズランド州", false),
+                ("西オーストラリア州", false));
+
+            // 追加クイズ
+            await EnsureChoiceQuestionAsync(cp4, "オペラハウスがある都市は？",
+                ("シドニー", true),
+                ("メルボルン", false),
+                ("キャンベラ", false),
+                ("ブリスベン", false));
+
+            await EnsureChoiceQuestionAsync(cp5, "オーストラリアの首都は？",
+                ("キャンベラ", true),
+                ("シドニー", false),
+                ("メルボルン", false),
+                ("パース", false));
+
+            return course;
+        }
+
+        // チェックポイントを作成（存在する場合は取得）
+        private async Task<Checkpoint> EnsureCheckpointAsync(int courseId, int order, CheckpointType type, string qrToken, int points)
+        {
+            var checkpoint = await _db.Checkpoints
+                .FirstOrDefaultAsync(c => c.CourseId == courseId && c.Order == order);
+
+            if (checkpoint != null)
             {
-                _db.Checkpoints.AddRange( new Checkpoint
+                return checkpoint;
+            }
+
+            checkpoint = new Checkpoint
+            {
+                CourseId = courseId,
+                Order = order,
+                Type = type,
+                Lat = 0,
+                Lng = 0,
+                Points = points,
+                QrToken = qrToken
+            };
+
+            _db.Checkpoints.Add(checkpoint);
+            await _db.SaveChangesAsync();
+
+            return checkpoint;
+        }
+
+        // 択一クイズを作成（存在する場合は維持）
+        private async Task EnsureChoiceQuestionAsync(Checkpoint checkpoint, string text,
+            params (string Text, bool IsCorrect)[] choices)
+        {
+            var exists = await _db.Questions.AnyAsync(q => q.CheckpointId == checkpoint.Id);
+            if (exists)
+            {
+                return;
+            }
+
+            var question = new Question
+            {
+                CheckpointId = checkpoint.Id,
+                Type = QuestionType.Choice,
+                TextJa = text
+            };
+
+            _db.Questions.Add(question);
+            await _db.SaveChangesAsync();
+
+            foreach (var choice in choices)
+            {
+                _db.ChoiceOptions.Add(new ChoiceOption
                 {
-                        CourseId = course.Id,
-                        Order = 1,
-                        Type = CheckpointType.Quiz,
-                        Lat = 0,
-                        Lng = 0,
-                        Points = 10,
-                        QrToken = "CP001"
+                    QuestionId = question.Id,
+                    TextJa = choice.Text,
+                    IsCorrect = choice.IsCorrect
                 });
-
-                await _db.SaveChangesAsync();
             }
 
-            // ✅ CP#1 にクイズを追加
-            var quizCheckpoint = await _db.Checkpoints
-                .FirstAsync(c => c.CourseId == course.Id && c.Order == 1);
-
-            var hasQuestion = await _db.Questions.AnyAsync(q => q.CheckpointId == quizCheckpoint.Id);
-
-            if (!hasQuestion)
-            {
-                var question = new Question
-                {
-                    CheckpointId = quizCheckpoint.Id,
-                    Type = QuestionType.Choice,
-                    TextJa = "シドニーがある州は？"
-
-                };
-
-                _db.Questions.Add(question);
-                await _db.SaveChangesAsync();
-
-                _db.ChoiceOptions.AddRange(
-                    new ChoiceOption { QuestionId = question.Id, TextJa = "ニューサウスウェールズ州", IsCorrect = true },
-                    new ChoiceOption { QuestionId = question.Id, TextJa = "ビクトリア州", IsCorrect = false },
-                    new ChoiceOption { QuestionId = question.Id, TextJa = "クイーンズランド州", IsCorrect = false },
-                    new ChoiceOption { QuestionId = question.Id, TextJa = "西オーストラリア州", IsCorrect = false }
-                );
-
-                await _db.SaveChangesAsync();
-            }
-
-            // ✅ 写真チェックポイントが無ければ作成
-            var hasPhotoCheckpoint = await _db.Checkpoints
-                .AnyAsync(c => c.CourseId == course.Id && c.Type == CheckpointType.Photo);
-
-            if (!hasPhotoCheckpoint)
-            {
-                _db.Checkpoints.Add(new Checkpoint
-                {
-                    CourseId = course.Id,
-                    Order = 2,
-                    Type = CheckpointType.Photo,
-                    Lat = 0,
-                    Lng = 0,
-                    Points = 20,
-                    QrToken = "CP002"
-                });
-                await _db.SaveChangesAsync();
-            }
-
-
-                return course; //新規作成したコースを返す
+            await _db.SaveChangesAsync();
         }
     }
 }

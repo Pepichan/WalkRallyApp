@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "チェックポイント";
     var runId = Request.Query["runId"];
+    var currentId = Model.CurrentCheckPoint?.Id;
 }
 
 <div class="app-page">
@@ -66,6 +67,7 @@
                 {
                     <form method="post" asp-page-handler="Answer">
                         <input type="hidden" name="runId" value="@runId" />
+                        <input type="hidden" name="checkpointId" value="@currentId" />
                         <p class="mb-3">@Model.CurrentQuestion.TextJa</p>
 
                         @foreach (var choice in Model.CurrentChoices)
@@ -90,7 +92,7 @@
 
                 <form method="post" asp-page-handler="ReachGps" class="mb-2">
                     <input type="hidden" name="runId" value="@runId" />
-                    <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint?.Id" />
+                    <input type="hidden" name="checkpointId" value="@currentId" />
                     <input type="hidden" class="gps-lat" name="Lat" />
                     <input type="hidden" class="gps-lng" name="Lng" />
                     <button class="btn btn-outline-primary w-100" type="button" data-gps-submit="true">GPSで判定</button>
@@ -98,18 +100,19 @@
 
                 <form method="post" asp-page-handler="ReachQr">
                     <input type="hidden" name="runId" value="@runId" />
-                    <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint?.Id" />
+                    <input type="hidden" name="checkpointId" value="@currentId" />
                     <input class="form-control mb-2" name="QrInput" placeholder="QRコードの文字列を入力" />
                     <button class="btn btn-outline-secondary w-100" type="submit">QRで判定</button>
                 </form>
             </div>
 
-            @if (Model.PhotoCheckpoint != null)
+            @if (Model.CurrentCheckPoint?.Type == CheckpointType.Photo)
             {
                 <div class="app-panel">
                     <div class="app-panel-title">写真ミッション</div>
                     <form method="post" asp-page-handler="Photo" enctype="multipart/form-data">
                         <input type="hidden" name="runId" value="@runId" />
+                        <input type="hidden" name="checkpointId" value="@currentId" />
                         <input type="file" name="PhotoFile" accept="image/*" class="form-control mb-2" />
                         <button class="btn btn-outline-secondary w-100" type="submit">写真を送信</button>
                     </form>
@@ -139,8 +142,11 @@
             <ul class="list-group list-group-flush">
                 @foreach (var cp in Model.Checkpoints)
                 {
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>#@cp.Order - @cp.Type</span>
+                    var active = cp.Id == currentId ? "active" : string.Empty;
+                    <li class="list-group-item d-flex justify-content-between align-items-center @active">
+                        <a class="text-decoration-none" asp-page="Map" asp-route-runId="@runId" asp-route-checkpointId="@cp.Id">
+                            #@cp.Order - @cp.Type
+                        </a>
                         <span class="badge bg-secondary">@cp.Points 点</span>
                     </li>
                 }
