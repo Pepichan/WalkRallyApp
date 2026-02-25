@@ -7,11 +7,10 @@
 <div class="app-page">
     <div class="app-card">
         <div class="app-title">運営ダッシュボード</div>
-        <p class="text-muted">班の進捗・順位・得点を確認できます。</p>
+        <p class="app-subtitle">班の進捗・順位・得点を確認できます。</p>
 
         <div class="app-section">
             <div class="app-section-title">班一覧</div>
-
             <div class="table-responsive">
                 <table class="table table-sm align-middle">
                     <thead>
@@ -41,7 +40,7 @@
 
         <div class="app-section">
             <div class="app-section-title">運営操作</div>
-            <div class="d-grid gap-2">
+            <div class="app-action-row">
                 <a class="btn btn-outline-primary" asp-page="/Admin/Announcement">アナウンス送信</a>
                 <form method="post" asp-page-handler="Export">
                     <button class="btn btn-outline-secondary w-100" type="submit">CSV出力</button>

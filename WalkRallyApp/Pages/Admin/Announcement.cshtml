@@ -7,6 +7,7 @@
 <div class="app-page">
     <div class="app-card">
         <div class="app-title">アナウンス送信</div>
+        <p class="app-subtitle">学生画面に通知を送信します。</p>
 
         <form method="post" class="mb-4">
             <div class="mb-3">
@@ -19,15 +20,17 @@
 
         <div class="app-section">
             <div class="app-section-title">送信履歴</div>
-            <ul class="list-group list-group-flush">
-                @foreach (var item in Model.Latest)
-                {
-                    <li class="list-group-item">
-                        <div class="fw-semibold">@item.Message</div>
-                        <div class="small text-muted">@item.CreatedAt.ToLocalTime():HH:mm</div>
-                    </li>
-                }
-            </ul>
+            <div class="app-card-soft">
+                <ul class="list-group list-group-flush">
+                    @foreach (var item in Model.Latest)
+                    {
+                        <li class="list-group-item">
+                            <div class="fw-semibold">@item.Message</div>
+                            <div class="small text-muted">@item.CreatedAt.ToLocalTime():HH:mm</div>
+                        </li>
+                    }
+                </ul>
+            </div>
         </div>
     </div>
 </div>

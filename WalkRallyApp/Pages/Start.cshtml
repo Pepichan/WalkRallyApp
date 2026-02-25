@@ -7,25 +7,28 @@
 <div class="app-page">
     <div class="app-card">
         <div class="app-title">スタート</div>
+        <p class="app-subtitle">準備ができたらスタートしてください。</p>
 
-        <div class="app-info-bar">
-            <div>
+        <div class="app-kv">
+            <div class="app-kv-item">
                 <div class="app-label">班名</div>
-                <div class="app-value">@Model.TeamName</div>
+                <div class="app-kv-value">@Model.TeamName</div>
             </div>
-            <div class="text-end">
+            <div class="app-kv-item text-end">
                 <div class="app-label">制限時間</div>
-                <div class="app-value">@Model.TimeLimitMinutes 分</div>
+                <div class="app-kv-value">@Model.TimeLimitMinutes 分</div>
             </div>
         </div>
 
         <div class="app-section">
             <div class="app-section-title">ルール</div>
-            <ul class="app-list">
-                <li>制限時間は60分</li>
-                <li>道路横断時は注意</li>
-                <li>ゴールはタウンホール前広場</li>
-            </ul>
+            <div class="app-card-soft">
+                <ul class="app-list">
+                    <li>制限時間は60分</li>
+                    <li>道路横断時は注意</li>
+                    <li>ゴールはタウンホール前広場</li>
+                </ul>
+            </div>
         </div>
 
         <form method="post" class="mt-4">

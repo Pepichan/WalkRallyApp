@@ -7,46 +7,53 @@
 <div class="app-page">
     <div class="app-card">
         <div class="app-title">ウォークラリー受付</div>
-        <p class="text-muted mb-4">班情報を入力して参加してください。</p>
+        <p class="app-subtitle">班情報を入力して参加してください。</p>
 
         <div class="text-danger mb-3" asp-validation-summary="All"></div>
 
         <form method="post" class="app-form">
-            <div class="mb-3">
-                <label class="form-label">班名</label>
-                <input class="form-control" asp-for="TeamName" />
+            <div class="app-section">
+                <div class="app-section-title">班情報</div>
+                <div class="mb-3">
+                    <label class="form-label">班名</label>
+                    <input class="form-control" asp-for="TeamName" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">人数</label>
+                    <input class="form-control" asp-for="MemberCount" type="number" min="1" max="100" />
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">人数</label>
-                <input class="form-control" asp-for="MemberCount" type="number" min="1" max="100" />
+            <div class="app-section">
+                <div class="app-section-title">代表者</div>
+                <div class="mb-3">
+                    <label class="form-label">代表者氏名</label>
+                    <input class="form-control" asp-for="RepresentativeName" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">学校名</label>
+                    <input class="form-control" asp-for="School" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">メールアドレス</label>
+                    <input class="form-control" asp-for="Email" type="email" />
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">代表者氏名</label>
-                <input class="form-control" asp-for="RepresentativeName" />
-            </div>
+            <div class="app-section">
+                <div class="app-section-title">同意</div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" asp-for="Consent" id="consent" />
+                    <label class="form-check-label" for="consent">個人情報の取り扱いに同意する</label>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">学校名</label>
-                <input class="form-control" asp-for="School" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">メールアドレス</label>
-                <input class="form-control" asp-for="Email" type="email" />
-            </div>
-
-            <div class="form-check mb-2">
-                <input class="form-check-input" asp-for="Consent" id="consent" />
-                <label class="form-check-label" for="consent">個人情報の取り扱いに同意する</label>
-            </div>
-
-            <div class="mb-3">
                 <a class="small text-muted" asp-controller="Home" asp-action="Privacy">利用規約・プライバシー</a>
             </div>
 
-            <button class="btn btn-primary w-100" type="submit">開始</button>
+            <button class="btn btn-primary w-100 mt-3" type="submit">開始</button>
         </form>
     </div>
 </div>

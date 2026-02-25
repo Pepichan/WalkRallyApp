@@ -1,8 +1,25 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "ウォークラリー";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="app-page">
+    <div class="app-card text-center">
+        <div class="app-title">ウォークラリーアプリ</div>
+        <p class="app-subtitle">班情報を入力してすぐに参加できます。</p>
+
+        <div class="app-section">
+            <div class="app-card-soft">
+                <div class="mb-2">参加の流れ</div>
+                <ul class="app-list text-start">
+                    <li>班情報を入力</li>
+                    <li>ルールを確認</li>
+                    <li>チェックポイントへ出発</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <a class="btn btn-primary w-100" asp-page="/Join">参加を開始する</a>
+        </div>
+    </div>
 </div>
