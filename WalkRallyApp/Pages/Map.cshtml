@@ -7,32 +7,16 @@
 
 <div class="app-page">
     <div class="app-card">
-        <div class="app-info-bar">
-            <div>
+        <div class="app-header">
+            <div class="app-header-item">
                 <div class="app-label">残り時間</div>
-                <div class="app-value">@Model.RemainingTimeText</div>
+                <div class="app-value app-value-large">@Model.RemainingTimeText</div>
             </div>
-            <div class="text-end">
+            <div class="app-header-item text-end">
                 <div class="app-label">班</div>
-                <div class="app-value">@Model.TeamName</div>
+                <div class="app-value app-value-large">@Model.TeamName</div>
             </div>
         </div>
-
-        @if (Model.Announcements.Any())
-        {
-            <div class="app-section">
-                <div class="app-section-title">お知らせ</div>
-                <ul class="list-group list-group-flush">
-                    @foreach (var a in Model.Announcements)
-                    {
-                        <li class="list-group-item">
-                            <div>@a.Message</div>
-                            <div class="small text-muted">@a.CreatedAt.ToLocalTime():HH:mm</div>
-                        </li>
-                    }
-                </ul>
-            </div>
-        }
 
         @if (!string.IsNullOrEmpty(Model.AnswerResult))
         {
@@ -54,6 +38,101 @@
             <div class="alert alert-warning">@Model.GoalResult</div>
         }
 
+        @if (Model.Announcements.Any())
+        {
+            <div class="app-section">
+                <div class="app-section-title">お知らせ</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var a in Model.Announcements)
+                    {
+                        <li class="list-group-item">
+                            <div>@a.Message</div>
+                            <div class="small text-muted">@a.CreatedAt.ToLocalTime():HH:mm</div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="app-section">
+            <div class="app-section-title">現在のチェックポイント</div>
+            <div class="app-value">#@Model.CurrentCheckPoint?.Order</div>
+        </div>
+
+        <div class="app-grid">
+            <div class="app-panel">
+                <div class="app-panel-title">クイズ</div>
+                @if (Model.CurrentQuestion != null)
+                {
+                    <form method="post" asp-page-handler="Answer">
+                        <input type="hidden" name="runId" value="@runId" />
+                        <p class="mb-3">@Model.CurrentQuestion.TextJa</p>
+
+                        @foreach (var choice in Model.CurrentChoices)
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="SelectedChoiceId" value="@choice.Id" id="choice_@choice.Id" />
+                                <label class="form-check-label" for="choice_@choice.Id">@choice.TextJa</label>
+                            </div>
+                        }
+
+                        <button class="btn btn-primary mt-3 w-100" type="submit">回答送信</button>
+                    </form>
+                }
+                else
+                {
+                    <div class="text-muted">クイズがありません。</div>
+                }
+            </div>
+
+            <div class="app-panel">
+                <div class="app-panel-title">到達判定</div>
+
+                <form method="post" asp-page-handler="ReachGps" class="mb-2">
+                    <input type="hidden" name="runId" value="@runId" />
+                    <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint?.Id" />
+                    <input type="hidden" class="gps-lat" name="Lat" />
+                    <input type="hidden" class="gps-lng" name="Lng" />
+                    <button class="btn btn-outline-primary w-100" type="button" data-gps-submit="true">GPSで判定</button>
+                </form>
+
+                <form method="post" asp-page-handler="ReachQr">
+                    <input type="hidden" name="runId" value="@runId" />
+                    <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint?.Id" />
+                    <input class="form-control mb-2" name="QrInput" placeholder="QRコードの文字列を入力" />
+                    <button class="btn btn-outline-secondary w-100" type="submit">QRで判定</button>
+                </form>
+            </div>
+
+            @if (Model.PhotoCheckpoint != null)
+            {
+                <div class="app-panel">
+                    <div class="app-panel-title">写真ミッション</div>
+                    <form method="post" asp-page-handler="Photo" enctype="multipart/form-data">
+                        <input type="hidden" name="runId" value="@runId" />
+                        <input type="file" name="PhotoFile" accept="image/*" class="form-control mb-2" />
+                        <button class="btn btn-outline-secondary w-100" type="submit">写真を送信</button>
+                    </form>
+                </div>
+            }
+
+            <div class="app-panel">
+                <div class="app-panel-title">ゴール判定</div>
+
+                <form method="post" asp-page-handler="ReachGoalGps" class="mb-2">
+                    <input type="hidden" name="runId" value="@runId" />
+                    <input type="hidden" class="gps-lat" name="Lat" />
+                    <input type="hidden" class="gps-lng" name="Lng" />
+                    <button class="btn btn-outline-success w-100" type="button" data-gps-submit="true">ゴール判定（GPS）</button>
+                </form>
+
+                <form method="post" asp-page-handler="ReachGoalQr">
+                    <input type="hidden" name="runId" value="@runId" />
+                    <input class="form-control mb-2" name="GoalQrInput" placeholder="ゴールQRの文字列を入力" />
+                    <button class="btn btn-outline-success w-100" type="submit">ゴール判定（QR）</button>
+                </form>
+            </div>
+        </div>
 
         <div class="app-section">
             <div class="app-section-title">チェックポイント一覧</div>
@@ -67,91 +146,6 @@
                 }
             </ul>
         </div>
-
-        <div class="app-section">
-            <div class="app-section-title">現在のチェックポイント</div>
-            <div class="text-muted">
-                #@Model.CurrentCheckPoint?.Order
-            </div>
-        </div>
-
-        <div class="app-section">
-            <div class="app-section-title">クイズ</div>
-            @if (Model.CurrentQuestion != null)
-            {
-                <form method="post" asp-page-handler="Answer">
-                    <input type="hidden" name="runId" value="@runId" />
-                    <p class="mb-3">@Model.CurrentQuestion.TextJa</p>
-
-                    @foreach (var choice in Model.CurrentChoices)
-                    {
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="SelectedChoiceId" value="@choice.Id" id="choice_@choice.Id" />
-                            <label class="form-check-label" for="choice_@choice.Id">@choice.TextJa</label>
-                        </div>
-                    }
-
-                    <button class="btn btn-primary mt-3 w-100" type="submit">回答送信</button>
-                </form>
-            }
-            else
-            {
-                <div class="text-muted">クイズがありません。</div>
-            }
-        </div>
-
-        @if (Model.PhotoCheckpoint != null)
-        {
-            <div class="app-section">
-                <div class="app-section-title">写真ミッション</div>
-                <form method="post" asp-page-handler="Photo" enctype="multipart/form-data">
-                    <input type="hidden" name="runId" value="@runId" />
-                    <input type="file" name="PhotoFile" accept="image/*" class="form-control mb-2" />
-                    <button class="btn btn-outline-secondary w-100" type="submit">写真を送信</button>
-                </form>
-            </div>
-        }
-
-        @if (Model.CurrentCheckPoint != null)
-        {
-            <div class="app-section">
-                <div class="app-section-title">到達判定</div>
-
-                <form method="post" asp-page-handler="ReachGps" class="mb-2">
-                    <input type="hidden" name="runId" value="@runId" />
-                    <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint.Id" />
-                    <input type="hidden" class="gps-lat" name="Lat" />
-                    <input type="hidden" class="gps-lng" name="Lng" />
-                    <button class="btn btn-outline-primary w-100" type="button" data-gps-submit="true">GPSで判定</button>
-                </form>
-
-                <form method="post" asp-page-handler="ReachQr">
-                    <input type="hidden" name="runId" value="@runId" />
-                    <input type="hidden" name="checkpointId" value="@Model.CurrentCheckPoint.Id" />
-                    <input class="form-control mb-2" name="QrInput" placeholder="QRコードの文字列を入力" />
-                    <button class="btn btn-outline-secondary w-100" type="submit">QRで判定</button>
-                </form>
-
-                <div class="app-section">
-                    <div class="app-section-title">ゴール判定</div>
-                    <form method="post" asp-page-handler="ReachGoalGps">
-                        <input type="hidden" name="runId" value="@runId" />
-                        <input type="hidden" class="gps-lat" name="Lat" />
-                        <input type="hidden" class="gps-lng" name="Lng" />
-                        <button class="btn btn-outline-success w-100" type="button" data-gps-submit="true">ゴール判定（GPS）</button>
-                    </form>
-                </div>
-
-                <div class="app-section">
-                    <div class="app-section-title">ゴール判定（QR）</div>
-                    <form method="post" asp-page-handler="ReachGoalQr">
-                        <input type="hidden" name="runId" value="@runId" />
-                        <input class="form-control mb-2" name="GoalQrInput" placeholder="ゴールQRの文字列を入力" />
-                        <button class="btn btn-outline-success w-100" type="submit">ゴール判定（QR）</button>
-                    </form>
-                </div>
-            </div>
-        }
     </div>
 
     @section Scripts
